@@ -1,6 +1,6 @@
 ---
 title: "{Fill in title}"
-author: "{Fill in names}"
+author: "Shilong Dai, <Add Your Name>"
 header-includes:
 - \usepackage{amsgen,amsmath,amstext,amsbsy,amsopn,amssymb,mathabx,amsthm,bm,bbm}
 - \usepackage[labelsep=space]{caption}
