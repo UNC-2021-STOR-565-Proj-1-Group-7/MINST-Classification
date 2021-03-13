@@ -71,16 +71,35 @@ preprocess_minst <- function (images, labels) {
   return(result)
 }
 
+split_minst <- function (minst, digit, train_amount = 2000, test_amount = 1000) {
+  selected_digit <- minst[minst[["digit"]] == digit, ]
+  train_rows <- sample(nrow(selected_digit), train_amount)
+  train_sample <- minst[train_rows, ]
+  remainder <- minst[-train_rows, ]
+  test_rows <- sample(nrow(remainder), test_amount)
+  test_sample <- remainder[test_rows, ]
+  return(list(train = train_sample, test = test_sample))
+}
+
 minst.train <- preprocess_minst(minst.train_raw$images, minst.train_raw$labels)
 minst.test <- preprocess_minst(minst.test_raw$images, minst.test_raw$labels)
+minst.combined <- rbind(minst.train, minst.test)
 
-head(minst.train)
-head(minst.test)
-write.csv(minst.train, "minst_train.csv", row.names = FALSE)
-write.csv(minst.test, "minst_test.csv", row.names = FALSE)
+minst_final.test <- data.frame()
+minst_final.train <- data.frame()
+for(i in 0:9) {
+  sampled <- split_minst(minst.combined, i)
+  minst_final.test <- rbind(minst_final.test, sampled$test)
+  minst_final.train <- rbind(minst_final.train, sampled$train)
+}
+
+head(minst_final.train)
+head(minst_final.test)
 ```
 
 The images and labels are combined and matched together into the sample and test dataframes. The rows in each dataframe represents the pixels of an image with its label. This is done in order to have the image and the label variable together for easier processing.
+
+TODO: Combined test and train, sampled 2000 per digit for train and 1000 per digit for test etc.
 
 # Exploratory Data Analysis
 4. Provide a statistical summary of the data as well as a summary of the data in words. Note that it is not necessary to list every summary statistic for every variable. Rather, try to give the reader a sense of what kinds of values the variables take on. And don't forget any categorical variables!
