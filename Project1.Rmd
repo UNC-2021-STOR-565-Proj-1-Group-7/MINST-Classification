@@ -22,6 +22,7 @@ subtitle: $\textbf{Machine Learning, Spring 2021}$
 set.seed(315)
 # Load necessary packages
 library(dslabs)
+library(ggplot2)
 ```
 
 
@@ -92,6 +93,8 @@ for(i in 0:9) {
   minst_final.test <- rbind(minst_final.test, sampled$test)
   minst_final.train <- rbind(minst_final.train, sampled$train)
 }
+minst_final.together <- rbind(minst_final.train, minst_final.test)
+
 
 head(minst_final.train)
 head(minst_final.test)
@@ -104,12 +107,49 @@ TODO: Combined test and train, sampled 2000 per digit for train and 1000 per dig
 # Exploratory Data Analysis
 4. Provide a statistical summary of the data as well as a summary of the data in words. Note that it is not necessary to list every summary statistic for every variable. Rather, try to give the reader a sense of what kinds of values the variables take on. And don't forget any categorical variables!
 ```{r, eval=FALSE}
-# Summarize the data.
+
+Mode <- function(x) {
+  ux <- unique(x)
+  return(ux[which.max(tabulate(match(x, ux)))])
+}
+
+image_only_minst <- minst_final.together[, -c(1)]
+flattened_images <- as.vector(t(image_only_minst))
+
+center_pixels <- as.vector(t(minst_final.together["p_392"]))
+edge_pixels <- as.vector(t(minst_final.together['p_1']))
+rand_pixels <- as.vector(t(minst_final.together['p_457']))
+
+flattened_sum <- summary(flattened_images)
+center_sum <- summary(center_pixels)
+corner_sum <- summary(edge_pixels)
+rand_sum <- summary(rand_pixels)
+
+sd_flattened <- sd(flattened_images)
+sd_center <- sd(center_pixels)
+sd_corner <- sd(edge_pixels)
+sd_rand <- sd(rand_pixels)
+sd_sum <- c(sd_flattened, sd_center, sd_corner, sd_rand)
+
+mode_flattened <- Mode(flattened_images)
+mode_center <- Mode(center_pixels)
+mode_corner <- Mode(edge_pixels)
+mode_rand <- Mode(rand_pixels)
+mode_sum <- c(mode_flattened, mode_center, mode_corner, mode_rand)
+
+sum_table <- rbind(flattened_sum, center_sum, corner_sum, rand_sum)
+sum_table <- cbind(sum_table, sd_sum, mode_sum)
+
+colnames(sum_table) <- c(colnames(sum_table)[1:6], "StDev", "Mode")
+rownames(sum_table) <- c("All", "Center", "Corner", "P. 457")
+print(sum_table)
 ```
 
 5. Pick three variables in your dataset and visualize the distribution of each in separate plots. Remember to properly title and label each plot. Compare them and comment on what you see. Do any of the distributions appear similar or different? In what ways?
 ```{r, eval=FALSE}
-# Visualize distributions of the data.
+ggplot(data = minst_final.together, aes(x = p_457)) + geom_histogram()
+ggplot(data = minst_final.together, aes(x = p_1)) + geom_histogram(binwidth = 1)
+ggplot(data = minst_final.together, aes(x = p_536)) + geom_histogram()
 ```
 
 
