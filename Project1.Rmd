@@ -1,6 +1,6 @@
 ---
 title: "{Fill in title}"
-author: "Shilong Dai, <Add Your Name>"
+author: "Shilong Dai, Alex Mangiapane, <Add Your Name>"
 header-includes:
 - \usepackage{amsgen,amsmath,amstext,amsbsy,amsopn,amssymb,mathabx,amsthm,bm,bbm}
 - \usepackage[labelsep=space]{caption}
@@ -145,24 +145,30 @@ rownames(sum_table) <- c("All", "Center", "Corner", "P. 457")
 print(sum_table)
 ```
 
+Rather than give a summary for each of the 784 pixels in each image, instead we gave a summary of four important categories: the entire set of pixel values, the center pixel (Pixel 384), a corner pixel (Pixel 1), and a random pixel (Pixel 457). It comes as no surprise that the center pixels are much darker on average than corner pixels, given how digits tend to be centerred in the middle of the image. In fact, given that the corner pixel has a max of 0, no writing was in the corner of any image. Also note that the centered pixel, as expected has a higher standard deviation than the corner pixel. Our randomly chosen pixel happened to be a darker than average pixel, as clearly displayed with a mean of 67.7 darkness, and with a higher than average standard deviation. Also note that the mode of each of thes categories is 0, meaning even in the center pixels, the most likely scenario is no writing in that pixel.
+
 5. Pick three variables in your dataset and visualize the distribution of each in separate plots. Remember to properly title and label each plot. Compare them and comment on what you see. Do any of the distributions appear similar or different? In what ways?
 ```{r, eval=FALSE}
-ggplot(data = minst_final.together, aes(x = p_457)) + geom_histogram()
-ggplot(data = minst_final.together, aes(x = p_1)) + geom_histogram(binwidth = 1)
-ggplot(data = minst_final.together, aes(x = p_536)) + geom_histogram()
+ggplot(data = minst_final.together, aes(x = p_457)) + geom_histogram() + ggtitle("Distribution of Pixel 457") + xlab("Pixel Values") + ylab("Frequency")
+ggplot(data = minst_final.together, aes(x = p_1)) + geom_histogram(binwidth = 1) + ggtitle("Distribution of Pixel 1") + xlab("Pixel Values") + ylab("Frequency")
+ggplot(data = minst_final.together, aes(x = p_536)) + geom_histogram() + ggtitle("Distribution of Pixel 536") + xlab("Pixel Values") + ylab("Frequency")
 ```
-
+As is clear in the histograms, we can clearly see that in pixel one, every image had a value of 0. Our other two chosene pixels, Pixel 457 and Pixel 536, had more interesting distributions. Pixel 457 still had mostly 0's, but also many 255's, with some much smaller frequency values spread out in between. Pixel 536 also had mostly 0's, with a very small amount of 255's, and very low frequency values in between. As such, Pixel 536 resembled Pixel 1 fairly closely, with almost entirely 0's, whereas Pixel 457 had a slightly greater range of values.
 
 6. Pick two numerical variables in your dataset. What is their correlation? Visualize their joint behavior in a single plot. Does this suggest that there is a strong relationship between the two?
 ```{r, eval=FALSE}
-# Compute correlation.
-# Plot joint behavior.
+cor(minst_final.together["p_455"], minst_final.together["p_456"])
+plot(minst_final.together$p_455, minst_final.together$p_456, main = "Plot of Pixel 455 Values Vs. Pixel 456 Values", xlab = "Pixel 455 Values", ylab = "Pixel 456 Values")
 ```
+Here, we arbitrarily chose to find the correlation between two pixels right next to each other (Pixels 455 and 456), expecting a reasonably strong correlation because of their proximity. We calculated the correlation between these two pixel values to be 0.781128, a strong correlation. As can be seen in the plot, there are many data points clustered in the top corners of the plot, with the data becoming increasingly sparse toward the middle. Thus, the plot does suggest a reasonable amount of correlation betweene the variables. 
 
 7. Pick two numerical variables in your dataset. Perform a hypothesis test to check whether their means are equal. Discuss what test you performed and why. What is the result of the test? Note that such a test won't make sense if you have centered your data so you should apply this to your data without any centering.
 ```{r, eval=FALSE}
-# Perform hypothesis test.
+mean(minst_final.together$p_455)
+mean(minst_final.together$p_456)
+wilcox.test(minst_final.together$p_455, minst_final.together$p_456)
 ```
+We can initially see that the means of the pixel darkness in Pixel 456 and Pixel 455 are quite different, so to determine if this is statistically significant, we use wilcox.test (since the data is paired and is not normally distributed, so we cannot just use t.test). Here, our p-value is extremely close to 0, so we can confidently reject our null hypothesis and conclude that these to variables have unequal means. Note: this test is known as the Wilcoxon Signed Rank Test.
 
 8. In a single plot, visualize the relationship between the means or medians and the standard deviations of each variable. Do you notice any outliers? 
 ```{r, eval=FALSE}
