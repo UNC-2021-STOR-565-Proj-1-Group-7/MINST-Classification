@@ -172,12 +172,16 @@ We can initially see that the means of the pixel darkness in Pixel 456 and Pixel
 
 8. In a single plot, visualize the relationship between the means or medians and the standard deviations of each variable. Do you notice any outliers? 
 ```{r, eval=FALSE}
-# Plot means or medians vs sds.
+means <- apply(minst_final.together, 2, mean)
+sds <- apply(minst_final.together, 2, sd)
+plot(means, sds, main = "Plot of Means vs. Standard Deviations", xlab = "Means", ylab = "Standard Deviations")
 ```
-
+Looking at the graph, there does appear to be one serious outlier near the bottom left, but otherwise the points all follow a very clear trend.
 
 # Principal Components Analysis
 9. Next, we would like to reduce the dimension of the data. Explain what the "dimension" of a dataset is. Discuss why one would want to reduce it. Provide an intuitive explanation of how PCA can achieve this.
+
+The dimension of a dataset is the number of variables it is tracking. In our example, we have 784 pixels of which we are tracking the darkness. This is a lot of variables to keep track of, and may often cause unnecessary expenses or time-wasting in collecting and analyzing so many different data components. As such, it is often desirable to reeduce the data into a more manageable number of components in order to save time and money, particularly if the dataset can be reduced without losing much information conveyed in the data. For instance, with our dataset, it would be highly beneficial if we could reduce the 784 pixels we track to less than 100, or even fewer, and still be able to accurately determine the value of the hand-drawn number. PCA achieves this by analyzing how much each component variable contributes to predicting the label, and then removing the components that contribute very little to the overall prediction. In our example, we may likely end up finding that the pixels around the border of our image, given that they are usually completely white, do not contribute to predicting the label, and thus we may reasonable stop tracking these pixels. 
 
 10. Run PCA on the dataset. Decide whether to set *scale = TRUE* or *scale = FALSE* and explain your choice. Provide a numerical summary of the first 5 PCs. Note that you should leave any categorical variables out of this analysis.
 ```{r, eval=FALSE}
