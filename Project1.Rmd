@@ -184,19 +184,23 @@ The dimension of a dataset is the number of variables it is tracking. In our exa
 10. Run PCA on the dataset. Decide whether to set *scale = TRUE* or *scale = FALSE* and explain your choice. Provide a numerical summary of the first 5 PCs. Note that you should leave any categorical variables out of this analysis.
 ```{r}
 minst_final.together.numerical <- minst_final.together[, -c(1)]
-minst_pcs <- prcomp(minst_final.together.numerical)
+minst_pcs <- prcomp(minst_final.together.numerical, scale = FALSE)
 minst_pcs_sum <- summary(minst_pcs)
 print(as.data.frame(minst_pcs_sum$importance[, 1:5]))
 ```
 
+The principle components were calculated without scaling the values, since all pixels are on the same scale and range, and all numerical values indicate grey scale value between 0 and 255.
+
 11. Plot a screeplot of the PCs. How many principal components are required to explain at least 80% of the variation in the data? Based on this and the plot, does it seem like PCA has done a good job in reducing the dimensionality of the data?
 ```{r, eval=FALSE}
-screeplot(minst_pcs, npcs = 20, type = "lines", main = "Variance explained by PC")
+screeplot(minst_pcs, npcs = 50, type = "lines", main = "Variance explained by PC")
 cum_pcs_filtered <- minst_pcs_sum$importance[3, abs(minst_pcs_sum$importance[3, ] - 0.8) < 0.01]
 cum_pcs_filtered <- as.data.frame(as.list(cum_pcs_filtered))
 rownames(cum_pcs_filtered) <- c("Cum. Variance Explained")
 print(cum_pcs_filtered)
 ```
+
+From the screeplot and principal components, PCA has clearly done a great job reducing the dimensionality of the data, as we capture 80% of the predictive information contained by the data in just 43 variables from the original 784 pixels. This is a very effective way to conserve resources, and reduce the dimension of the data.
 
 12. Visualize the distributions of the first 3 PCs in separate plots and comment. Are there any apparent clusters? Do any of the first 3 PCs appear most helpful for separating the data?
 ```{r, eval = FALSE}
@@ -217,7 +221,11 @@ for(i in 1:3) {
 }
 
 ```
-From the screeplot and principal components, PCA has clearly done a great job reducing the dimensionality of the data, as we capture 80% of the predictive information contained by the data in just 43 of the 784 pixels. This is a very effective way to conserve resources.
+Looking at the graph of PC1, it has a separation of the digit '0' and '1' from the rest of the digit. The digit '0' tends to have PC1 values below or around -1000, while the digit '1' have PC1 values around 1000. The rest of the digits are in a mix between the digit '0' and '1' between -1000 and 800.
+
+There are no clear cluster in the graph of PC2 in comparison to PC1. However, it still somewhat separated the digit '3' from the rest of the digit. The rest of the digits are blended together. However, PC2 is still able to separate digit '4' and '7' from '6,' '1,' and '2' roughly at the value of around -300, while the digit '9' is scattered throughout the plot.
+
+The plot of PC3 shows less pattern than PC1 or PC2. However, it can still be distinguished that there is a band of digit 1 around the PC3 value of 0. The remaining digits are scattered throughout the plot.
 
 13. Plot the first 3 PCs against one another (see the Biplots section of Computing Assignment 3). Are there any apparent clusters?
 ```{r, eval = FALSE}
