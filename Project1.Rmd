@@ -217,7 +217,7 @@ for(i in 1:3) {
 }
 
 ```
-
+From the screeplot and principal components, PCA has clearly done a great job reducing the dimensionality of the data, as we capture 80% of the predictive information contained by the data in just 43 of the 784 pixels. This is a very effective way to conserve resources.
 
 13. Plot the first 3 PCs against one another (see the Biplots section of Computing Assignment 3). Are there any apparent clusters?
 ```{r, eval = FALSE}
