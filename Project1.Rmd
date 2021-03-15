@@ -209,7 +209,7 @@ minst_pcs_df.3 <- data.frame(
 minst_pcs_df.3 <- cbind(minst_final.together["digit"], minst_pcs_df.3)
 minst_pcs_df.3[, "digit"] <- factor(minst_pcs_df.3[, "digit"])
 
-# TODO: figure out how to combine the three graph in one frame
+# TODO: figure out how to combine the three graph in one frame. Alternatively, use the default plot, but it is a pain to deal with in terms of adding legend for color
 
 for(i in 1:3) {
   col <- paste0("PC", i)
