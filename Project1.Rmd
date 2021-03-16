@@ -1,6 +1,6 @@
 ---
 title: "{Fill in title}"
-author: "Shilong Dai, Alex Mangiapane, <Add Your Name>"
+author: "Shilong Dai, Alex Mangiapane, Yinuo Hu"
 header-includes:
 - \usepackage{amsgen,amsmath,amstext,amsbsy,amsopn,amssymb,mathabx,amsthm,bm,bbm}
 - \usepackage[labelsep=space]{caption}
@@ -107,6 +107,7 @@ The images and labels are combined and matched together into the sample and test
 
 # Exploratory Data Analysis
 4. Provide a statistical summary of the data as well as a summary of the data in words. Note that it is not necessary to list every summary statistic for every variable. Rather, try to give the reader a sense of what kinds of values the variables take on. And don't forget any categorical variables!
+
 ```{r, eval=FALSE}
 
 Mode <- function(x) {
@@ -253,12 +254,46 @@ ggpairs(data=minst_pcs_pair_df, title = "Pairwise PC Plot", columns = 2:4, upper
 # Clustering
 14. Next we would like to perform a cluster analysis on the data. Explain intuitively what that means. What exactly is a cluster? What are the objects being clustered? Why might this be helpful for this dataset?
 
+Cluster analysis aims to divides the data into different subgroups based on their attributes. For our data, the images in the same cluster should be close together, and the images in different clusters should be far apart. We aim to categorize the images into a corresponding digits from 0-9. The clustering analysis have the potential to match each image into its most likely cluster to assign a digit to the image. We can try different number of clusters for our data and observe whether the clustering method can help label the images to correct digits. 
+
 15. Apply one of the clustering algorithms you learned about in class to your data. Depending on the algorithm you use, you may need to specify a cutpoint to obtain a single cluster label for each sample. Note also that depending on the dimension of your dataset, it may be preferable to apply the clustering algorithm to the first few PCs of your data rather than the data itself. Elaborate upon your choice.
+
+We use K-means algorithm for clustering. From our previous PCA analysis, we noticed that 80% of the predictive information contained within the data can be captured by first 43 PCs, so we decided to use the first 43 PCs for analysis instead of the total 784 pixels. 
+
 ```{r, eval = FALSE}
-# Apply the clustering algorithm.
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering algorithms & visualization
+minst_kmeans_df = minst_pcs$x[, 1:43]
+k10 <- kmeans(minst_kmeans_df, centers = 10, nstart = 25)
+k9 <- kmeans(minst_kmeans_df, centers = 9, nstart = 25)
+k8 <- kmeans(minst_kmeans_df, centers = 8, nstart = 25)
+k7 <- kmeans(minst_kmeans_df, centers = 7, nstart = 25)
+k6 <- kmeans(minst_kmeans_df, centers = 6, nstart = 25)
+k5 <- kmeans(minst_kmeans_df, centers = 5, nstart = 25)
+k4 <- kmeans(minst_kmeans_df, centers = 4, nstart = 25)
+k3 <- kmeans(minst_kmeans_df, centers = 3, nstart = 25)
+k2 <- kmeans(minst_kmeans_df, centers = 2, nstart = 25)
+
+
+# plots to compare
+p10 <- fviz_cluster(k10, geom = "point", data = minst_kmeans_df) + ggtitle("k = 10")
+p9 <- fviz_cluster(k9, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 9")
+p8 <- fviz_cluster(k8, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 8")
+p7 <- fviz_cluster(k7, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 7")
+p6 <- fviz_cluster(k6, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 6")
+p5 <- fviz_cluster(k5, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 5")
+p4 <- fviz_cluster(k4, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 4")
+p3 <- fviz_cluster(k3, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 3")
+p2 <- fviz_cluster(k2, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 2")
+
+library(gridExtra)
+grid.arrange(p10, p9, p8, p7, p6, p5, p4, p3, p2, nrow = 3)
 ```
 
 16. What did the clustering algorithm find? Are the clusters relatively homogeneous or heterogeneous? Summarize the results.
+
+The clusters seemed to be relatively homogeneous for all number of clusters we tried. 
 ```{r, eval = FALSE}
 # Summarize results of clustering.
 ```
@@ -266,6 +301,23 @@ ggpairs(data=minst_pcs_pair_df, title = "Pairwise PC Plot", columns = 2:4, upper
 17. What is the within-cluster sum of squares for the clusters you found? How does this compare to the total sum of squares?
 ```{r, eval = FALSE}
 # Compute sums of squares.
+set.seed(123)
+
+# function to compute total within-cluster sum of square 
+wss <- function(k) {
+  kmeans(minst_kmeans_df, k, nstart = 10 )$tot.withinss
+}
+
+# Compute and plot wss for k = 1 to k = 15
+k.values <- 1:15
+
+# extract wss for 2-15 clusters
+wss_values <- map_dbl(k.values, wss)
+
+plot(k.values, wss_values,
+       type="b", pch = 19, frame = FALSE, 
+       xlab="Number of clusters K",
+       ylab="Total within-clusters sum of squares")
 ```
 
 18. Plot the first 3 PCs against one another again but include the cluster label for each point. Do any patterns emerge? Comment on what you see.
