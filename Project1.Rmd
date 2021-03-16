@@ -23,6 +23,7 @@ set.seed(315)
 # Load necessary packages
 library(dslabs)
 library(ggplot2)
+library(GGally)
 ```
 
 
@@ -82,8 +83,11 @@ split_minst <- function (minst, digit, train_amount = 2000, test_amount = 1000) 
   return(list(train = train_sample, test = test_sample))
 }
 
-minst.train <- preprocess_minst(minst.train_raw$images, minst.train_raw$labels)
-minst.test <- preprocess_minst(minst.test_raw$images, minst.test_raw$labels)
+# minst.train <- preprocess_minst(minst.train_raw$images, minst.train_raw$labels)
+# minst.test <- preprocess_minst(minst.test_raw$images, minst.test_raw$labels)
+# get this from the zip if website slow or down
+minst.train <- read.csv("minst_train.csv")
+minst.test <- read.csv("minst_test.csv")
 minst.combined <- rbind(minst.train, minst.test)
 
 minst_final.test <- data.frame()
@@ -204,36 +208,47 @@ From the screeplot and principal components, PCA has clearly done a great job re
 
 12. Visualize the distributions of the first 3 PCs in separate plots and comment. Are there any apparent clusters? Do any of the first 3 PCs appear most helpful for separating the data?
 ```{r, eval = FALSE}
+minst_pcs_df.1 <- data.frame(
+  PC = rep("PC1", length(minst_pcs$x[, 1])),
+  Value = minst_pcs$x[, 1]
+)
+minst_pcs_df.1 <- cbind(minst_final.together["digit"], minst_pcs_df.1)
+minst_pcs_df.1[, "digit"] <- factor(minst_pcs_df.1[, "digit"])
+
+minst_pcs_df.2 <- data.frame(
+  PC = rep("PC2", length(minst_pcs$x[, 2])),
+  Value = minst_pcs$x[, 2]
+)
+minst_pcs_df.2 <- cbind(minst_final.together["digit"], minst_pcs_df.2)
+minst_pcs_df.2[, "digit"] <- factor(minst_pcs_df.2[, "digit"])
+
 minst_pcs_df.3 <- data.frame(
-  IDX = rownames(minst_final.together.numerical),
-  PC1 = minst_pcs$x[, 1],
-  PC2 = minst_pcs$x[, 2],
-  PC3 = minst_pcs$x[, 3]
+  PC = rep("PC3", length(minst_pcs$x[, 3])),
+  Value = minst_pcs$x[, 3]
 ) 
 minst_pcs_df.3 <- cbind(minst_final.together["digit"], minst_pcs_df.3)
 minst_pcs_df.3[, "digit"] <- factor(minst_pcs_df.3[, "digit"])
 
-# TODO: figure out how to combine the three graph in one frame. Alternatively, use the default plot, but it is a pain to deal with in terms of adding legend for color
+minst_pcs_df <- rbind(minst_pcs_df.1, minst_pcs_df.2, minst_pcs_df.3)
 
-for(i in 1:3) {
-  col <- paste0("PC", i)
-  print(ggplot(data = minst_pcs_df.3, aes(color = digit)) + aes_string(x = "IDX", y = col) + geom_point() + ggtitle(paste0("PC", i, " with Digit")) + xlab("Sample Number") + ylab("PC Score"))
-}
+ggplot(data = minst_pcs_df, aes(fill = digit)) + aes(x = Value) + geom_boxplot() +xlab("PC Value") + facet_grid(. ~ PC) + ggtitle("PC Score Distributions")
 
 ```
-Looking at the graph of PC1, it has a separation of the digit '0' and '1' from the rest of the digit. The digit '0' tends to have PC1 values below or around -1000, while the digit '1' have PC1 values around 1000. The rest of the digits are in a mix between the digit '0' and '1' between -1000 and 800.
+Looking at the graph of PC1, it has a separation of the digit '0' and '1' from the rest of the digit. The digit '0' tends to have PC1 values around -1400 to -700, while the digit '1' have PC1 values around or slightly below 1000. The rest of the digits are in a mix between the digit '0' and '1' between -1000 and 800.
 
-There are no clear cluster in the graph of PC2 in comparison to PC1. However, it still somewhat separated the digit '3' from the rest of the digit. The rest of the digits are blended together. However, PC2 is still able to separate digit '4' and '7' from '6,' '1,' and '2' roughly at the value of around -300, while the digit '9' is scattered throughout the plot.
+There are no clear clustering digit-wise in the graph of PC2 in comparison to PC1. However, it was able to separate the group of digits 9, 7, and 4 in a clear-cut way from the rest of the digits.
 
-The plot of PC3 shows less pattern than PC1 or PC2. However, it can still be distinguished that there is a band of digit 1 around the PC3 value of 0. The remaining digits are scattered throughout the plot.
+The plot of PC3 shows less pattern than PC1 or PC2. However, it can still be distinguished that there is a band of digit 1 around the PC3 value of 0. The remaining digits are more more scattered.
 
 13. Plot the first 3 PCs against one another (see the Biplots section of Computing Assignment 3). Are there any apparent clusters?
 ```{r, eval = FALSE}
-pairs(minst_pcs_df.3[, 3:5], col = minst_pcs_df.3$digit, oma=c(3,3,3,15))
-par(xpd = TRUE)
-
-# TODO: might need to tweek the size of the legend, and add label
-legend("bottomright", fill = unique(minst_pcs_df.3$digit), legend = c( levels(minst_pcs_df.3$digit)))
+minst_pcs_pair_df <- minst_pcs_df[minst_pcs_df$PC == "PC1", c(1, 3)]
+colnames(minst_pcs_pair_df)[2] <- "PC1"
+minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC2", c(3)])
+colnames(minst_pcs_pair_df)[3] <- "PC2"
+minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC3", c(3)])
+colnames(minst_pcs_pair_df)[4] <- "PC3"
+ggpairs(data=minst_pcs_pair_df, title = "Pairwise PC Plot", columns = 2:4, upper = list(continuous = "points"), mapping = ggplot2::aes(color = digit), legend = 1)
 ```
 
 # Clustering
