@@ -100,8 +100,7 @@ for(i in 0:9) {
 minst_final.together <- rbind(minst_final.train, minst_final.test)
 
 
-head(minst_final.train)
-head(minst_final.test)
+head(minst_final.together)
 ```
 
 The images and labels are combined and matched together into the sample and test dataframes. The rows in each dataframe represents the pixels of an image with its label. This is done in order to have the image and the label variable together for easier processing.
