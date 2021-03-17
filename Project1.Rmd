@@ -73,7 +73,7 @@ preprocess_minst <- function (images, labels) {
   return(result)
 }
 
-split_minst <- function (minst, digit, train_amount = 2000, test_amount = 1000) {
+split_minst <- function (minst, digit, train_amount = 2400, test_amount = 600) {
   selected_digit <- minst[minst[["digit"]] == digit, ]
   train_rows <- sample(nrow(selected_digit), train_amount)
   train_sample <- minst[train_rows, ]
@@ -254,11 +254,11 @@ ggpairs(data=minst_pcs_pair_df, title = "Pairwise PC Plot", columns = 2:4, upper
 # Clustering
 14. Next we would like to perform a cluster analysis on the data. Explain intuitively what that means. What exactly is a cluster? What are the objects being clustered? Why might this be helpful for this dataset?
 
-Cluster analysis aims to divides the data into different subgroups based on their attributes. For our data, the images in the same cluster should be close together, and the images in different clusters should be far apart. We aim to categorize the images into a corresponding digits from 0-9. The clustering analysis have the potential to match each image into its most likely cluster to assign a digit to the image. We can try different number of clusters for our data and observe whether the clustering method can help label the images to correct digits. 
+Cluster analysis aims to divides the data into different subgroups based on their attributes. It's a type of unsupervised learning to find structure in unlabeled data. For our data, the images in the same cluster should be close together, and the images in different clusters should be far apart. We aim to categorize the images into a corresponding digits from 0-9. The clustering analysis have the potential to match each image into its most likely cluster to assign a digit to the image. We can try different number of clusters for our data and observe whether the clustering method can help label the images to correct digits. 
 
 15. Apply one of the clustering algorithms you learned about in class to your data. Depending on the algorithm you use, you may need to specify a cutpoint to obtain a single cluster label for each sample. Note also that depending on the dimension of your dataset, it may be preferable to apply the clustering algorithm to the first few PCs of your data rather than the data itself. Elaborate upon your choice.
 
-We use K-means algorithm for clustering. From our previous PCA analysis, we noticed that 80% of the predictive information contained within the data can be captured by first 43 PCs, so we decided to use the first 43 PCs for analysis instead of the total 784 pixels. 
+We use K-means algorithm for clustering. From our previous PCA analysis, we noticed that 80% of the predictive information contained within the data can be captured by first 43 PCs, so we decided to use the first 43 PCs for analysis instead of the total 784 pixels. Since we want to categorize the images into digits from 0-9, we pick k value as 10 to cluster the images into 10 categories.  
 
 ```{r, eval = FALSE}
 library(tidyverse)  # data manipulation
@@ -266,69 +266,88 @@ library(cluster)    # clustering algorithms
 library(factoextra) # clustering algorithms & visualization
 minst_kmeans_df = minst_pcs$x[, 1:43]
 k10 <- kmeans(minst_kmeans_df, centers = 10, nstart = 25)
-k9 <- kmeans(minst_kmeans_df, centers = 9, nstart = 25)
-k8 <- kmeans(minst_kmeans_df, centers = 8, nstart = 25)
-k7 <- kmeans(minst_kmeans_df, centers = 7, nstart = 25)
-k6 <- kmeans(minst_kmeans_df, centers = 6, nstart = 25)
-k5 <- kmeans(minst_kmeans_df, centers = 5, nstart = 25)
-k4 <- kmeans(minst_kmeans_df, centers = 4, nstart = 25)
-k3 <- kmeans(minst_kmeans_df, centers = 3, nstart = 25)
-k2 <- kmeans(minst_kmeans_df, centers = 2, nstart = 25)
-
 
 # plots to compare
-p10 <- fviz_cluster(k10, geom = "point", data = minst_kmeans_df) + ggtitle("k = 10")
-p9 <- fviz_cluster(k9, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 9")
-p8 <- fviz_cluster(k8, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 8")
-p7 <- fviz_cluster(k7, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 7")
-p6 <- fviz_cluster(k6, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 6")
-p5 <- fviz_cluster(k5, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 5")
-p4 <- fviz_cluster(k4, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 4")
-p3 <- fviz_cluster(k3, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 3")
-p2 <- fviz_cluster(k2, geom = "point",  data = minst_kmeans_df) + ggtitle("k = 2")
-
-library(gridExtra)
-grid.arrange(p10, p9, p8, p7, p6, p5, p4, p3, p2, nrow = 3)
+fviz_cluster(k10, geom = "point", data = minst_kmeans_df) + ggtitle("k = 10")
+k10
 ```
 
 16. What did the clustering algorithm find? Are the clusters relatively homogeneous or heterogeneous? Summarize the results.
 
-The clusters seemed to be relatively homogeneous for all number of clusters we tried. 
+Homogeneity means all of the observations with the same class label are in the same cluster. The cluster 7 and 9 are relatively homogeneous as their standard deviation for labels are only around 1, all other clusters have higher standard deviations are are relatively heterogeneous. 
+
 ```{r, eval = FALSE}
 # Summarize results of clustering.
+minst_pcs_cluster_df <- cbind(minst_pcs_df[minst_pcs_df$PC == "PC1", c(1)], k10$cluster)
+minst_pcs_cluster_df <- data.frame(minst_pcs_cluster_df)
+colnames(minst_pcs_cluster_df)[1] <- "digit"
+colnames(minst_pcs_cluster_df)[2] <- "cluster"
+
+summary_cluster.1 <- c(summary(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 1, ]$digit), sd(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 1, ]$digit))
+summary_cluster.2 <- c(summary(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 2, ]$digit), sd(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 2, ]$digit))
+summary_cluster <- cbind(summary_cluster.1, summary_cluster.2)
+summary_cluster <- data.frame(summary_cluster)
+#sd(minst_pcs_cluster_df.1$digit)
+for(i in 3:10) {                                   
+  new <- c(summary(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == i, ]$digit), sd(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == i, ]$digit))                      
+  summary_cluster[, ncol(summary_cluster)+1] <- new                 
+}
+for (i in 1:10){
+  colnames(summary_cluster)[i] <- paste0("Cluster", i) 
+}
+row.names(summary_cluster)[7] <- "sd"
+summary_cluster
 ```
 
 17. What is the within-cluster sum of squares for the clusters you found? How does this compare to the total sum of squares?
+The within-cluster sum of squares of all clusters are shown in the table. We observed that only cluster 3 has much less sum of squares compared to the total sum of squares, all other clusters have similar or more sum of squares than the total sum of squares. 
 ```{r, eval = FALSE}
 # Compute sums of squares.
-set.seed(123)
-
-# function to compute total within-cluster sum of square 
-wss <- function(k) {
-  kmeans(minst_kmeans_df, k, nstart = 10 )$tot.withinss
+withinclustersos <- data.frame(k10$withinss)
+for(i in 1:10){
+  row.names(withinclustersos)[i] <- paste0("Cluster", i) 
 }
-
-# Compute and plot wss for k = 1 to k = 15
-k.values <- 1:15
-
-# extract wss for 2-15 clusters
-wss_values <- map_dbl(k.values, wss)
-
-plot(k.values, wss_values,
-       type="b", pch = 19, frame = FALSE, 
-       xlab="Number of clusters K",
-       ylab="Total within-clusters sum of squares")
+withinclustersos
+k10$tot.withinss
 ```
 
 18. Plot the first 3 PCs against one another again but include the cluster label for each point. Do any patterns emerge? Comment on what you see.
+```{r}
+head(minst_pcs_pair_df)
+head(k10$cluster)
+cbind(minst_pcs_pair_df, k10$cluster)
+```
+
 ```{r, eval = FALSE}
 # Plot PCs with clusters.
+minst_pcs_pair_df <- minst_pcs_df[minst_pcs_df$PC == "PC1", c(1, 3)]
+colnames(minst_pcs_pair_df)[2] <- "PC1"
+minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC2", c(3)])
+colnames(minst_pcs_pair_df)[3] <- "PC2"
+minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC3", c(3)])
+colnames(minst_pcs_pair_df)[4] <- "PC3"
+minst_pcs_cluster_pair_df <- cbind(minst_pcs_pair_df, k10$cluster)
+colnames(minst_pcs_cluster_pair_df)[5] <- "cluster"
+head(minst_pcs_cluster_pair_df)
+ggpairs(data=minst_pcs_cluster_pair_df, title = "Pairwise PC Plot with Cluster", columns = 2:4, upper = list(continuous = "points"), mapping = ggplot2::aes(color = cluster), legend = 1)
+
+```
+```{r}
+pairs(pcs$x, col = species)
+```
+
+```{r}
+summary(minst_pcs_cluster_pair_df$cluster)
 ```
 
 # Classification
 19. Next we would like to perform classification on the data. Explain intuitively what that means. What does it mean to classify the data? What are the objects being classified? Why might this be of interest for this dataset?
 
+Classification is a type of supervised learning. We use labeled data in the training dataset to make predictions on unlabeled testing dataset. We have certain existing categories in our labeled data, and we are using the attributes of labeled data to build model to predict which category does the unlabeled data belongs to. In our dataset, we have labeled images in the minst_final.train, and each of the images are already matched with one of the 10 digits from 0 to 9. We wish to use our training data to classify the images in our testing data to corresponding digits from 0 to 9. 
+
 20. Identify a categorical variable in the data to correspond to the class of each sample in the dataset. In particular, is there a variable that might be interesting to predict from the other variables?
+
+For our dataset, we only have numerical variables since they are pixel values at different positions. [NEED REVISION]
 
 21. Construct a table that describes how many samples in each class fall into each cluster. How well was your previous cluster analysis able to identify the classes you chose? Are any of the clusters comprised mostly by one class?
 ```{r, eval=FALSE}
@@ -338,6 +357,31 @@ plot(k.values, wss_values,
 22. Randomly break your dataset into a training set (roughly 80% of the data) and a test set (roughly 20% of the data). What is the point of doing this before doing classification?
 ```{r, eval = FALSE}
 # Break into train and test sets.
+split_minst <- function (minst, digit, train_amount = 2400, test_amount = 600) {
+  selected_digit <- minst[minst[["digit"]] == digit, ]
+  train_rows <- sample(nrow(selected_digit), train_amount)
+  train_sample <- minst[train_rows, ]
+  remainder <- minst[-train_rows, ]
+  test_rows <- sample(nrow(remainder), test_amount)
+  test_sample <- remainder[test_rows, ]
+  return(list(train = train_sample, test = test_sample))
+}
+
+# minst.train <- preprocess_minst(minst.train_raw$images, minst.train_raw$labels)
+# minst.test <- preprocess_minst(minst.test_raw$images, minst.test_raw$labels)
+# get this from the zip if website slow or down
+minst.train <- read.csv("minst_train.csv")
+minst.test <- read.csv("minst_test.csv")
+minst.combined <- rbind(minst.train, minst.test)
+
+minst_final.test <- data.frame()
+minst_final.train <- data.frame()
+for(i in 0:9) {
+  sampled <- split_minst(minst.combined, i)
+  minst_final.test <- rbind(minst_final.test, sampled$test)
+  minst_final.train <- rbind(minst_final.train, sampled$train)
+}
+minst_final.together <- rbind(minst_final.train, minst_final.test)
 ```
 
 23. Using the class labels based on the categorical variable you chose earlier, apply a classification method to the training set. Be sure to specify any free parameters that were chosen. What is the accuracy of the fitted model on the training set?
