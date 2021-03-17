@@ -12,7 +12,7 @@ subtitle: $\textbf{Machine Learning, Spring 2021}$
 ---
 
 # Abstract
-*{Fill in your abstract}*
+Our report studied the MNIST handwritten digits data by conducting exploratory data analysis, principal component analysis, unsupervised K-means clustering method, and supervised KNN classification algorithm. [NEED REVISION]
 
 # Introduction
 *{Fill in your introduction}*
@@ -29,11 +29,36 @@ library(GGally)
 
 # Loading and Preprocessing the Data
 1. Begin by loading the dataset you've chosen. Depending on which dataset you've chosen, it may be helpful to consider a subset of the data for your analyses. Give an explanation as to why you did or did not subset your data.
-```{r}
-minst_data <- read_mnist()
-minst.train_raw <- minst_data$train
-minst.test_raw <- minst_data$test
 
+Since our dataset has 70000 observations in total, and it may take long to train the model when running our later classification algorithm, so we take a subset of total 5000 observations. Since we have 10 digits in total, we randomly picked 400 images per digits as training data, and we randomly picked 100 images per digits as testing data. We will use the total 5000 images for the analysis in the first several parts. 
+```{r}
+#minst_data <- read_mnist()
+#minst.train_raw <- minst_data$train
+#minst.test_raw <- minst_data$test
+split_minst <- function (minst, digit, train_amount = 400, test_amount = 100) {
+  selected_digit <- minst[minst[["digit"]] == digit, ]
+  train_rows <- sample(nrow(selected_digit), train_amount)
+  train_sample <- minst[train_rows, ]
+  remainder <- minst[-train_rows, ]
+  test_rows <- sample(nrow(remainder), test_amount)
+  test_sample <- remainder[test_rows, ]
+  return(list(train = train_sample, test = test_sample))
+}
+
+minst.train <- read.csv("minst_train.csv")
+minst.test <- read.csv("minst_test.csv")
+minst.combined <- rbind(minst.train, minst.test)
+
+minst_sample.test <- data.frame()
+minst_sample.train <- data.frame()
+for(i in 0:9) {
+  sampled <- split_minst(minst.combined, i)
+  minst_sample.test <- rbind(minst_sample.test, sampled$test)
+  minst_sample.train <- rbind(minst_sample.train, sampled$train)
+}
+minst_sample.together <- rbind(minst_sample.train, minst_sample.test)
+
+head(minst_sample.together)
 ```
 
 2. Next, provide some basic information about the data. What are the samples and what are the variables? How many samples are there? How many variables are there? How many of those variables are numerical vs categorical? How many of the numerical variables are discrete? Discuss any other information about the data that you think is relevant.
@@ -73,21 +98,11 @@ preprocess_minst <- function (images, labels) {
   return(result)
 }
 
-split_minst <- function (minst, digit, train_amount = 2400, test_amount = 600) {
-  selected_digit <- minst[minst[["digit"]] == digit, ]
-  train_rows <- sample(nrow(selected_digit), train_amount)
-  train_sample <- minst[train_rows, ]
-  remainder <- minst[-train_rows, ]
-  test_rows <- sample(nrow(remainder), test_amount)
-  test_sample <- remainder[test_rows, ]
-  return(list(train = train_sample, test = test_sample))
-}
-
-# minst.train <- preprocess_minst(minst.train_raw$images, minst.train_raw$labels)
-# minst.test <- preprocess_minst(minst.test_raw$images, minst.test_raw$labels)
-# get this from the zip if website slow or down
-minst.train <- read.csv("minst_train.csv")
-minst.test <- read.csv("minst_test.csv")
+#minst.train <- preprocess_minst(minst.train_raw$images, minst.train_raw$labels)
+#minst.test <- preprocess_minst(minst.test_raw$images, minst.test_raw$labels)
+# get this from local csv if website slow or down
+#minst.train <- read.csv("minst_train.csv")
+#minst.test <- read.csv("minst_test.csv")
 minst.combined <- rbind(minst.train, minst.test)
 
 minst_final.test <- data.frame()
@@ -98,7 +113,6 @@ for(i in 0:9) {
   minst_final.train <- rbind(minst_final.train, sampled$train)
 }
 minst_final.together <- rbind(minst_final.train, minst_final.test)
-
 
 head(minst_final.together)
 ```
@@ -147,7 +161,7 @@ rownames(sum_table) <- c("All", "Center", "Corner", "P. 457")
 print(as.data.frame(sum_table))
 ```
 
-Rather than give a summary for each of the 784 pixels in each image, instead we gave a summary of four important categories: the entire set of pixel values, the center pixel (Pixel 384), a corner pixel (Pixel 1), and a random pixel (Pixel 457). It comes as no surprise that the center pixels are much darker on average than corner pixels, given how digits tend to be centerred in the middle of the image. In fact, given that the corner pixel has a max of 0, no writing was in the corner of any image. Also note that the centered pixel, as expected has a higher standard deviation than the corner pixel. Our randomly chosen pixel happened to be a darker than average pixel, as clearly displayed with a mean of 67.7 darkness, and with a higher than average standard deviation. Also note that the mode of each of thes categories is 0, meaning even in the center pixels, the most likely scenario is no writing in that pixel.
+Rather than give a summary for each of the 784 pixels in each image, instead we gave a summary of four important categories: the entire set of pixel values, the center pixel (Pixel 384), a corner pixel (Pixel 1), and a random pixel (Pixel 457). It comes as no surprise that the center pixels are much darker on average than corner pixels, given how digits tend to be centerred in the middle of the image. In fact, given that the corner pixel has a max of 0, no writing was in the corner of any image. Also note that the centered pixel, as expected has a higher standard deviation than the corner pixel. Our randomly chosen pixel happened to be a darker than average pixel, as clearly displayed with a mean of 68.87 darkness, and with a higher than average standard deviation. Also note that the mode of each of these categories is 0, meaning even in the center pixels, the most likely scenario is no writing in that pixel.
 
 5. Pick three variables in your dataset and visualize the distribution of each in separate plots. Remember to properly title and label each plot. Compare them and comment on what you see. Do any of the distributions appear similar or different? In what ways?
 ```{r}
@@ -269,19 +283,21 @@ k10 <- kmeans(minst_kmeans_df, centers = 10, nstart = 25)
 
 # plots to compare
 fviz_cluster(k10, geom = "point", data = minst_kmeans_df) + ggtitle("k = 10")
-k10
+#k10
 ```
 
 16. What did the clustering algorithm find? Are the clusters relatively homogeneous or heterogeneous? Summarize the results.
 
-Homogeneity means all of the observations with the same class label are in the same cluster. The cluster 7 and 9 are relatively homogeneous as their standard deviation for labels are only around 1, all other clusters have higher standard deviations are are relatively heterogeneous. 
+Homogeneity means all of the observations with the same class label are in the same cluster. We noticed that the standard deviation of all clusters are less than 3, and most of them are less than or around 2, so we can say that the clusters are relatively homogeneous. 
 
 ```{r, eval = FALSE}
 # Summarize results of clustering.
 minst_pcs_cluster_df <- cbind(minst_pcs_df[minst_pcs_df$PC == "PC1", c(1)], k10$cluster)
 minst_pcs_cluster_df <- data.frame(minst_pcs_cluster_df)
+minst_pcs_cluster_df[,1] <- minst_pcs_cluster_df[,1] -1
 colnames(minst_pcs_cluster_df)[1] <- "digit"
 colnames(minst_pcs_cluster_df)[2] <- "cluster"
+minst_pcs_cluster_df
 
 summary_cluster.1 <- c(summary(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 1, ]$digit), sd(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 1, ]$digit))
 summary_cluster.2 <- c(summary(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 2, ]$digit), sd(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 2, ]$digit))
@@ -300,7 +316,7 @@ summary_cluster
 ```
 
 17. What is the within-cluster sum of squares for the clusters you found? How does this compare to the total sum of squares?
-The within-cluster sum of squares of all clusters are shown in the table. We observed that only cluster 3 has much less sum of squares compared to the total sum of squares, all other clusters have similar or more sum of squares than the total sum of squares. 
+The within-cluster sum of squares of all clusters are shown in the table. We observed that only cluster 1 has much less sum of squares compared to the total sum of squares, and cluster 2, 6, 7, 8, 9 are slightly less than the total sum of squares. All other clusters have more sum of squares than the total sum of squares. 
 ```{r, eval = FALSE}
 # Compute sums of squares.
 withinclustersos <- data.frame(k10$withinss)
@@ -312,11 +328,6 @@ k10$tot.withinss
 ```
 
 18. Plot the first 3 PCs against one another again but include the cluster label for each point. Do any patterns emerge? Comment on what you see.
-```{r}
-head(minst_pcs_pair_df)
-head(k10$cluster)
-cbind(minst_pcs_pair_df, k10$cluster)
-```
 
 ```{r, eval = FALSE}
 # Plot PCs with clusters.
@@ -332,13 +343,6 @@ head(minst_pcs_cluster_pair_df)
 ggpairs(data=minst_pcs_cluster_pair_df, title = "Pairwise PC Plot with Cluster", columns = 2:4, upper = list(continuous = "points"), mapping = ggplot2::aes(color = cluster), legend = 1)
 
 ```
-```{r}
-pairs(pcs$x, col = species)
-```
-
-```{r}
-summary(minst_pcs_cluster_pair_df$cluster)
-```
 
 # Classification
 19. Next we would like to perform classification on the data. Explain intuitively what that means. What does it mean to classify the data? What are the objects being classified? Why might this be of interest for this dataset?
@@ -347,17 +351,38 @@ Classification is a type of supervised learning. We use labeled data in the trai
 
 20. Identify a categorical variable in the data to correspond to the class of each sample in the dataset. In particular, is there a variable that might be interesting to predict from the other variables?
 
-For our dataset, we only have numerical variables since they are pixel values at different positions. [NEED REVISION]
+For our dataset, we have one categorical variable, which is the labeled digit of the images (from 0-9). The digit variable might be possible to be predictd from the other pixel variables of the image. 
 
 21. Construct a table that describes how many samples in each class fall into each cluster. How well was your previous cluster analysis able to identify the classes you chose? Are any of the clusters comprised mostly by one class?
+
 ```{r, eval=FALSE}
 # Construct table.
+cluster_label_table <- data.frame()
+for (i in 1:10){
+  for (j in 1:10){
+    cluster_label_table[i, j] <- nrow(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == i & minst_pcs_cluster_df$digit == (j-1),])
+  }
+ colnames(cluster_label_table)[i] <- paste0("Class", i-1)
+}
+cluster_total <- data.frame()
+for (i in 1:10){
+  cluster_total[i, 1] <- nrow(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == i,])
+}
+cluster_label_table <-  cbind(cluster_total, cluster_label_table)
+colnames(cluster_label_table)[1] <- "Total"
+for (i in 1:10){
+  row.names(cluster_label_table)[i] <- paste0("Cluster", i)
+}
+cluster_label_table
 ```
+From the table, we can observe that cluster1, cluster6, cluster7, cluster8 are mostly comprised by one class. Cluster1 is mostly comprised by class1 by 292/377; cluster 6 is mostly comprised by class6 by 391/442; cluster7 is mostly comprised by class2 by 301/329, and cluster 8 is mostly comprised by class0 by 361/387. All other clusters are comprised by multiple majority classes and it's hard to determine a prediction of one class from them. In general, our clustering may not have a good performance in predicting one class per image. 
 
 22. Randomly break your dataset into a training set (roughly 80% of the data) and a test set (roughly 20% of the data). What is the point of doing this before doing classification?
+
+We broke our dataset of 5000 obserbations in to 4000 images of training set and 1000 images of test set. We will need to utilize the training set to train and refine our model for classification, and the test set is used to examine the effectiveness and accuracy of our prediction model. 
 ```{r, eval = FALSE}
 # Break into train and test sets.
-split_minst <- function (minst, digit, train_amount = 2400, test_amount = 600) {
+split_minst <- function (minst, digit, train_amount = 400, test_amount = 100) {
   selected_digit <- minst[minst[["digit"]] == digit, ]
   train_rows <- sample(nrow(selected_digit), train_amount)
   train_sample <- minst[train_rows, ]
@@ -366,10 +391,6 @@ split_minst <- function (minst, digit, train_amount = 2400, test_amount = 600) {
   test_sample <- remainder[test_rows, ]
   return(list(train = train_sample, test = test_sample))
 }
-
-# minst.train <- preprocess_minst(minst.train_raw$images, minst.train_raw$labels)
-# minst.test <- preprocess_minst(minst.test_raw$images, minst.test_raw$labels)
-# get this from the zip if website slow or down
 minst.train <- read.csv("minst_train.csv")
 minst.test <- read.csv("minst_test.csv")
 minst.combined <- rbind(minst.train, minst.test)
@@ -388,6 +409,7 @@ minst_final.together <- rbind(minst_final.train, minst_final.test)
 ```{r, eval = FALSE}
 # Run classification algorithm.
 # Compute training set accuracy.
+
 ```
 
 24. What is the accuracy of the fitted model on the test set? How does this compare to the accuracy on the training set? Does this make sense? Explain why or why not.
