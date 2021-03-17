@@ -290,6 +290,10 @@ fviz_cluster(k10, geom = "point", data = minst_kmeans_df) + ggtitle("k = 10")
 
 Homogeneity means all of the observations with the same class label are in the same cluster. We noticed that the standard deviation of all clusters are less than 3, and most of them are less than or around 2, so we can say that the clusters are relatively homogeneous. 
 
+```{r}
+minst_pcs_df
+```
+
 ```{r, eval = FALSE}
 # Summarize results of clustering.
 minst_pcs_cluster_df <- cbind(minst_pcs_df[minst_pcs_df$PC == "PC1", c(1)], k10$cluster)
