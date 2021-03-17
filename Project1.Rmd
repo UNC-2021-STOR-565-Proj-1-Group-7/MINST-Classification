@@ -24,69 +24,23 @@ set.seed(315)
 library(dslabs)
 library(ggplot2)
 library(GGally)
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering algorithms & visualization
+library(caret)
 ```
 
 
 # Loading and Preprocessing the Data
 1. Begin by loading the dataset you've chosen. Depending on which dataset you've chosen, it may be helpful to consider a subset of the data for your analyses. Give an explanation as to why you did or did not subset your data.
 
-Since our dataset has 70000 observations in total, and it may take long to train the model when running our later classification algorithm, so we take a subset of total 5000 observations. Since we have 10 digits in total, we randomly picked 400 images per digits as training data, and we randomly picked 100 images per digits as testing data. We will use the total 5000 images for the analysis in the first several parts. 
+Since our dataset has 70000 observations in total, and it may take long to train the model when running our later classification algorithm, so we take a subset of total 5000 observations. First, we converted the raw data to a dataframe, where the columns include the digit and the pixel values, and each row is a single image. Then, we combined the test and training set from the original MNIST collection to arrive at a single pool of images. From the combined pool, we did stratified sampling to ensure that there are an equal amount of sample for each of the digits. Since we have 10 digits in total, we randomly picked 500 images per digit, which results in a total of 5000 images overall.
+
 ```{r}
 #minst_data <- read_mnist()
 #minst.train_raw <- minst_data$train
 #minst.test_raw <- minst_data$test
-split_minst <- function (minst, digit, train_amount = 400, test_amount = 100) {
-  selected_digit <- minst[minst[["digit"]] == digit, ]
-  train_rows <- sample(nrow(selected_digit), train_amount)
-  train_sample <- minst[train_rows, ]
-  remainder <- minst[-train_rows, ]
-  test_rows <- sample(nrow(remainder), test_amount)
-  test_sample <- remainder[test_rows, ]
-  return(list(train = train_sample, test = test_sample))
-}
 
-minst.train <- read.csv("minst_train.csv")
-minst.test <- read.csv("minst_test.csv")
-minst.combined <- rbind(minst.train, minst.test)
-
-minst_sample.test <- data.frame()
-minst_sample.train <- data.frame()
-for(i in 0:9) {
-  sampled <- split_minst(minst.combined, i)
-  minst_sample.test <- rbind(minst_sample.test, sampled$test)
-  minst_sample.train <- rbind(minst_sample.train, sampled$train)
-}
-minst_sample.together <- rbind(minst_sample.train, minst_sample.test)
-
-head(minst_sample.together)
-```
-
-2. Next, provide some basic information about the data. What are the samples and what are the variables? How many samples are there? How many variables are there? How many of those variables are numerical vs categorical? How many of the numerical variables are discrete? Discuss any other information about the data that you think is relevant.
-```{r}
-print("Training Sample Size")
-length(minst.train_raw$labels)
-print("Training Image Size")
-length(minst.train_raw$images[1, ])
-print("Training Number 1")
-minst.train_raw$labels[1]
-print("Training Number Range")
-sort(unique(minst.train_raw$labels))
-print("Test Sample Size")
-length(minst.test_raw$labels)
-print("Test Image Size")
-length(minst.test_raw$images[1, ])
-print("Test Number 1")
-minst.test_raw$labels[1]
-print("Test Number Range")
-sort(unique(minst.test_raw$labels))
-```
-
-The data consists of a set of training and test samples. For both the training and test samples, the sample consists of a sequence of images in greyscale and labels. Each image is flattened from 2D to a 1D sequence of values between 0 and 255, which indicates the blackness of the pixel. After flattening, there are 784  Each label is a number corresponding to the actual handwritting digit of the associated image.
-
-There are a total of 60000 training samples, and 10000 test samples. Since all representations are either digital or labels indicating the written digit, both the greyscale value and the digit label are discrete. Each greyscale value corresponds to an pixel and thus is natural numbers on [0, 255]. The label of the numbers themselves are categorical variables between 0 and 9, representing the nine digits.
-
-3. In some scenarios, it may be helpful to transform or preprocess your data in some way before embarking on your analysis. For example, one may wish to center and standardize each numerical variable before performing certain regression analyses. On the other hand, one may wish to group some factors of a categorical variable together. Perform any preprocessing that you feel is appropriate and discuss the motivation for this choice. If you decide not to, explain why. Note that it may be helpful to omit this step and return at a later point once you have explored the data a bit.
-```{r}
 preprocess_minst <- function (images, labels) {
   image_col_names = c("digit")
   for (i in 1:length(images[1, ])) {
@@ -98,26 +52,49 @@ preprocess_minst <- function (images, labels) {
   return(result)
 }
 
+split_minst <- function (minst, digit, sample_size = 500) {
+  selected_digit <- minst[minst[["digit"]] == digit, ]
+  sampled_rows <- sample(nrow(selected_digit), sample_size)
+  
+  return(selected_digit[sampled_rows, ])
+}
+
 #minst.train <- preprocess_minst(minst.train_raw$images, minst.train_raw$labels)
 #minst.test <- preprocess_minst(minst.test_raw$images, minst.test_raw$labels)
-# get this from local csv if website slow or down
-#minst.train <- read.csv("minst_train.csv")
-#minst.test <- read.csv("minst_test.csv")
+
+minst.train <- read.csv("minst_train.csv")
+minst.test <- read.csv("minst_test.csv")
 minst.combined <- rbind(minst.train, minst.test)
 
-minst_final.test <- data.frame()
-minst_final.train <- data.frame()
+minst_sample.together <- data.frame()
 for(i in 0:9) {
   sampled <- split_minst(minst.combined, i)
-  minst_final.test <- rbind(minst_final.test, sampled$test)
-  minst_final.train <- rbind(minst_final.train, sampled$train)
+  minst_sample.together <- rbind(minst_sample.together, sampled)
 }
-minst_final.together <- rbind(minst_final.train, minst_final.test)
 
-head(minst_final.together)
+head(minst_sample.together)
 ```
 
-The images and labels are combined and matched together into the sample and test dataframes. The rows in each dataframe represents the pixels of an image with its label. This is done in order to have the image and the label variable together for easier processing.
+2. Next, provide some basic information about the data. What are the samples and what are the variables? How many samples are there? How many variables are there? How many of those variables are numerical vs categorical? How many of the numerical variables are discrete? Discuss any other information about the data that you think is relevant.
+
+The data consists of a set of black and white images with the label for the digit it represent. Each image is flattened from 2D to a 1D sequence of values row by row. Each label is a number corresponding to the actual handwritting digit of the associated image.
+
+After our initial preprocessing, each pixel is represented by the column "p_num" in the dataframe, where "num" is the index of the pixel in the flattened 1D sequence. Since there are 784 pixels, there are 784 pixel columns. Each pixel takes a discrete greyscale value between 0 and 255, where the greater the number, the darker the pixel. Furthermore, the label for the image is associated with each image via the column "digit." All 10 digits are included, so the "digit" column takes the value of integer from 0 to 9, representing the actual digit of the handwriting respectively. Therefore, there are 784 numerical variables in this dataset consisting of the pixel greyscale values, and 1 categorical variable consiting of the label of the handwriting image. As indicated before, there are 500 images associated with each handwritten digit.
+
+```{r}
+summary_minst_init <- data.frame(
+  Pixels = length(minst_sample.together) - 1,
+  Digits = length(unique(minst_sample.together[["digit"]])),
+  Image.Count = nrow(minst_sample.together[minst_sample.together[["digit"]] == 1, ]),
+  Max.Pixel = max(minst_sample.together[, -c(1)]),
+  Min.Pixel = min(minst_sample.together[, -c(1)])
+)
+print(summary_minst_init)
+```
+
+3. In some scenarios, it may be helpful to transform or preprocess your data in some way before embarking on your analysis. For example, one may wish to center and standardize each numerical variable before performing certain regression analyses. On the other hand, one may wish to group some factors of a categorical variable together. Perform any preprocessing that you feel is appropriate and discuss the motivation for this choice. If you decide not to, explain why. Note that it may be helpful to omit this step and return at a later point once you have explored the data a bit.
+
+All of the images are centered by mass, as indicated on the MNIST website, with greyscale values between 0 and 255. Therefore, no normalization is necessary on this dataset. There are 10 digits as categories for this dataset. We did not group them because each is a distinct, equal class of data by itself.
 
 # Exploratory Data Analysis
 4. Provide a statistical summary of the data as well as a summary of the data in words. Note that it is not necessary to list every summary statistic for every variable. Rather, try to give the reader a sense of what kinds of values the variables take on. And don't forget any categorical variables!
@@ -129,12 +106,12 @@ Mode <- function(x) {
   return(ux[which.max(tabulate(match(x, ux)))])
 }
 
-image_only_minst <- minst_final.together[, -c(1)]
+image_only_minst <- minst_sample.together[, -c(1)]
 flattened_images <- as.vector(t(image_only_minst))
 
-center_pixels <- as.vector(t(minst_final.together["p_392"]))
-edge_pixels <- as.vector(t(minst_final.together['p_1']))
-rand_pixels <- as.vector(t(minst_final.together['p_457']))
+center_pixels <- as.vector(t(minst_sample.together["p_392"]))
+edge_pixels <- as.vector(t(minst_sample.together['p_1']))
+rand_pixels <- as.vector(t(minst_sample.together['p_457']))
 
 flattened_sum <- summary(flattened_images)
 center_sum <- summary(center_pixels)
@@ -161,53 +138,58 @@ rownames(sum_table) <- c("All", "Center", "Corner", "P. 457")
 print(as.data.frame(sum_table))
 ```
 
-Rather than give a summary for each of the 784 pixels in each image, instead we gave a summary of four important categories: the entire set of pixel values, the center pixel (Pixel 384), a corner pixel (Pixel 1), and a random pixel (Pixel 457). It comes as no surprise that the center pixels are much darker on average than corner pixels, given how digits tend to be centerred in the middle of the image. In fact, given that the corner pixel has a max of 0, no writing was in the corner of any image. Also note that the centered pixel, as expected has a higher standard deviation than the corner pixel. Our randomly chosen pixel happened to be a darker than average pixel, as clearly displayed with a mean of 68.87 darkness, and with a higher than average standard deviation. Also note that the mode of each of these categories is 0, meaning even in the center pixels, the most likely scenario is no writing in that pixel.
+Rather than give a summary for each of the 784 pixels in each image, instead we gave a summary of four important categories: the entire set of pixel values, the center pixel (Pixel 392), a corner pixel (Pixel 1), and a random pixel (Pixel 457). It turns out that some writings do pass through the center of the image in contrary to the corner pixel, as indicated by a non-zero mean with a max value of 51. In fact, given that the corner pixel has a max of 0, no writing was in the upper left corner of any image sampled. However, it is still relatively uncommon for the digit to pass through the exact center, since the center mean is much lower than the overall mean of the greyscale values, while the standard deviation is also much lower. Our randomly chosen pixel happened to be a darker than average pixel, as clearly displayed with a mean of 67.90 darkness, and with a greater standard deviation. Also note that the mode of each of these categories is 0, which means that for a given image, most of the space on the canvas is blank.
 
 5. Pick three variables in your dataset and visualize the distribution of each in separate plots. Remember to properly title and label each plot. Compare them and comment on what you see. Do any of the distributions appear similar or different? In what ways?
 ```{r}
-ggplot(data = minst_final.together, aes(x = p_457)) + geom_histogram() + ggtitle("Distribution of Pixel 457") + xlab("Pixel Values") + ylab("Frequency")
-ggplot(data = minst_final.together, aes(x = p_1)) + geom_histogram(binwidth = 1) + ggtitle("Distribution of Pixel 1") + xlab("Pixel Values") + ylab("Frequency")
-ggplot(data = minst_final.together, aes(x = p_536)) + geom_histogram() + ggtitle("Distribution of Pixel 536") + xlab("Pixel Values") + ylab("Frequency")
+ggplot(data = minst_sample.together, aes(x = p_457)) + geom_histogram() + ggtitle("Distribution of Pixel 457") + xlab("Pixel Values") + ylab("Frequency")
+ggplot(data = minst_sample.together, aes(x = p_1)) + geom_histogram(binwidth = 1) + ggtitle("Distribution of Pixel 1") + xlab("Pixel Values") + ylab("Frequency")
+ggplot(data = minst_sample.together, aes(x = p_537)) + geom_histogram() + ggtitle("Distribution of Pixel 536") + xlab("Pixel Values") + ylab("Frequency")
 ```
-As is clear in the histograms, we can clearly see that in pixel one, every image had a value of 0. Our other two chosene pixels, Pixel 457 and Pixel 536, had more interesting distributions. Pixel 457 still had mostly 0's, but also many 255's, with some much smaller frequency values spread out in between. Pixel 536 also had mostly 0's, with a very small amount of 255's, and very low frequency values in between. As such, Pixel 536 resembled Pixel 1 fairly closely, with almost entirely 0's, whereas Pixel 457 had a slightly greater range of values.
+As is clear in the histograms, we can clearly see that in pixel 1, a corner pixel, every image had a value of 0. This confirms the summary statistics in the previous section. Our other two chosen pixels, Pixel 457 and Pixel 537, had more interesting distributions. Pixel 457 still had mostly 0's, but also many 255's, with some much smaller frequency values spread out in between. Pixel 537 also had mostly 0's, with a very small amount of 255's, and almost no values in-between. As such, Pixel 537 resembled Pixel 1 fairly closely, with almost entirely 0's, whereas Pixel 457 had a slightly greater range of values.
 
 6. Pick two numerical variables in your dataset. What is their correlation? Visualize their joint behavior in a single plot. Does this suggest that there is a strong relationship between the two?
 ```{r}
-cor(minst_final.together["p_455"], minst_final.together["p_456"])
-plot(minst_final.together$p_455, minst_final.together$p_456, main = "Plot of Pixel 455 Values Vs. Pixel 456 Values", xlab = "Pixel 455 Values", ylab = "Pixel 456 Values")
+cor(minst_sample.together["p_455"], minst_sample.together["p_456"])
+plot(minst_sample.together$p_455, minst_sample.together$p_456, main = "Plot of Pixel 455 Values Vs. Pixel 456 Values", xlab = "Pixel 455 Values", ylab = "Pixel 456 Values")
 ```
-Here, we arbitrarily chose to find the correlation between two pixels right next to each other (Pixels 455 and 456), expecting a reasonably strong correlation because of their proximity. We calculated the correlation between these two pixel values to be 0.781128, a strong correlation. As can be seen in the plot, there are many data points clustered in the top corners of the plot, with the data becoming increasingly sparse toward the middle. Thus, the plot does suggest a reasonable amount of correlation betweene the variables. 
+Here, we arbitrarily chose to find the correlation between two pixels right next to each other (Pixels 455 and 456), expecting a reasonably strong correlation because of their proximity. We calculated the correlation between these two pixel values to be 0.779, a strong correlation. As can be seen in the plot, there are many data points clustered in the top corners of the plot, with the data becoming increasingly sparse toward the middle. Thus, the plot does suggest a reasonable amount of correlation betweene the variables. 
 
 7. Pick two numerical variables in your dataset. Perform a hypothesis test to check whether their means are equal. Discuss what test you performed and why. What is the result of the test? Note that such a test won't make sense if you have centered your data so you should apply this to your data without any centering.
 ```{r}
-mean(minst_final.together$p_455)
-mean(minst_final.together$p_456)
-wilcox.test(minst_final.together$p_455, minst_final.together$p_456)
+mean(minst_sample.together$p_455)
+mean(minst_sample.together$p_456)
+wilcox.test(minst_sample.together$p_455, minst_sample.together$p_456)
 ```
 We can initially see that the means of the pixel darkness in Pixel 456 and Pixel 455 are quite different, so to determine if this is statistically significant, we use wilcox.test (since the data is paired and is not normally distributed, so we cannot just use t.test). Here, our p-value is extremely close to 0, so we can confidently reject our null hypothesis and conclude that these to variables have unequal means. Note: this test is known as the Wilcoxon Signed Rank Test.
 
 8. In a single plot, visualize the relationship between the means or medians and the standard deviations of each variable. Do you notice any outliers? 
 ```{r, eval=FALSE}
-means <- apply(minst_final.together, 2, mean)
-sds <- apply(minst_final.together, 2, sd)
+means <- apply(minst_sample.together, 2, mean)
+sds <- apply(minst_sample.together, 2, sd)
 plot(means, sds, main = "Plot of Means vs. Standard Deviations", xlab = "Means", ylab = "Standard Deviations")
 ```
-Looking at the graph, there does appear to be one serious outlier near the bottom left, but otherwise the points all follow a very clear trend.
+Looking at the graph, there does appear to be one distinct outlier near the bottom left, but otherwise the points all follow a very clear trend.
 
 # Principal Components Analysis
 9. Next, we would like to reduce the dimension of the data. Explain what the "dimension" of a dataset is. Discuss why one would want to reduce it. Provide an intuitive explanation of how PCA can achieve this.
 
-The dimension of a dataset is the number of variables it is tracking. In our example, we have 784 pixels of which we are tracking the darkness. This is a lot of variables to keep track of, and may often cause unnecessary expenses or time-wasting in collecting and analyzing so many different data components. As such, it is often desirable to reeduce the data into a more manageable number of components in order to save time and money, particularly if the dataset can be reduced without losing much information conveyed in the data. For instance, with our dataset, it would be highly beneficial if we could reduce the 784 pixels we track to less than 100, or even fewer, and still be able to accurately determine the value of the hand-drawn number. PCA achieves this by analyzing how much each component variable contributes to predicting the label, and then removing the components that contribute very little to the overall prediction. In our example, we may likely end up finding that the pixels around the border of our image, given that they are usually completely white, do not contribute to predicting the label, and thus we may reasonable stop tracking these pixels. 
+The dimension of a dataset is the number of variables it is tracking. In our example, we have 784 pixels of which we are tracking the darkness. This is a lot of variables to keep track of, and may often cause unnecessary expenses or time-wasting in collecting and analyzing so many different data components. As such, it is often desirable to reeduce the data into a more manageable number of components in order to save time, particularly if the dataset can be reduced without losing much information conveyed in the data. If the dimension can be reduced to a few, then visualization of the data in a 2D plot can carry more information, since the other dimensions would be captured adequately by the few dimension that could be plotted. Furthermore, as the dimension increases, some distance measures between points converges, so that data points become more uniformally distributed. It would result in some clustering and classification method to lose sensitivity. Finally, some methods such as LDA requires the dimension to be less than the number of sample, so that the dimension must be reduced for it to be applied. 
+
+PCA can attempt to reduce the dimension of the data by essentially reframing it in a different way. The data is transformed from its original high dimensional coordinates with many different axis to a different coordinate system. Each axis in the new coordinate system represent a different perspective of looking at the data. To reduce the dimensions, the number of axis can be minimized so that adding a new axis or perspective doesn't really change the view very much, or that the lower dimensional view with less axis looks almost as diverse as the original high dimensional view. When such suitable new coordinate is found, it retains a good portion of the variation in the dataset, but with a different orientation, while the dimension may be much lower than the original.
+
+For instance, with our dataset, it would be highly beneficial if we could reduce the 784 pixels we track to less than 100, or even fewer, and still be able to clearly distinguish the value of the hand-drawn number. In our example, we probably can greatly reduce the dimension, since the most common data value is 0. Intuitively, the handwriting only takes up a minority of the canvas, so that PCA should be able to retain the information in the actual handwriting, while collapsing the white space.
 
 10. Run PCA on the dataset. Decide whether to set *scale = TRUE* or *scale = FALSE* and explain your choice. Provide a numerical summary of the first 5 PCs. Note that you should leave any categorical variables out of this analysis.
+
+The principle components were calculated without scaling the values, since all pixels are on the same scale and range, and all numerical values indicate greyscale between 0 and 255.
+
 ```{r}
-minst_final.together.numerical <- minst_final.together[, -c(1)]
-minst_pcs <- prcomp(minst_final.together.numerical, scale = FALSE)
+minst_sample.together.numerical <- minst_sample.together[, -c(1)]
+minst_pcs <- prcomp(minst_sample.together.numerical, scale = FALSE)
 minst_pcs_sum <- summary(minst_pcs)
 print(as.data.frame(minst_pcs_sum$importance[, 1:5]))
 ```
-
-The principle components were calculated without scaling the values, since all pixels are on the same scale and range, and all numerical values indicate grey scale value between 0 and 255.
 
 11. Plot a screeplot of the PCs. How many principal components are required to explain at least 80% of the variation in the data? Based on this and the plot, does it seem like PCA has done a good job in reducing the dimensionality of the data?
 ```{r, eval=FALSE}
@@ -226,21 +208,21 @@ minst_pcs_df.1 <- data.frame(
   PC = rep("PC1", length(minst_pcs$x[, 1])),
   Value = minst_pcs$x[, 1]
 )
-minst_pcs_df.1 <- cbind(minst_final.together["digit"], minst_pcs_df.1)
+minst_pcs_df.1 <- cbind(minst_sample.together["digit"], minst_pcs_df.1)
 minst_pcs_df.1[, "digit"] <- factor(minst_pcs_df.1[, "digit"])
 
 minst_pcs_df.2 <- data.frame(
   PC = rep("PC2", length(minst_pcs$x[, 2])),
   Value = minst_pcs$x[, 2]
 )
-minst_pcs_df.2 <- cbind(minst_final.together["digit"], minst_pcs_df.2)
+minst_pcs_df.2 <- cbind(minst_sample.together["digit"], minst_pcs_df.2)
 minst_pcs_df.2[, "digit"] <- factor(minst_pcs_df.2[, "digit"])
 
 minst_pcs_df.3 <- data.frame(
   PC = rep("PC3", length(minst_pcs$x[, 3])),
   Value = minst_pcs$x[, 3]
 ) 
-minst_pcs_df.3 <- cbind(minst_final.together["digit"], minst_pcs_df.3)
+minst_pcs_df.3 <- cbind(minst_sample.together["digit"], minst_pcs_df.3)
 minst_pcs_df.3[, "digit"] <- factor(minst_pcs_df.3[, "digit"])
 
 minst_pcs_df <- rbind(minst_pcs_df.1, minst_pcs_df.2, minst_pcs_df.3)
@@ -248,9 +230,9 @@ minst_pcs_df <- rbind(minst_pcs_df.1, minst_pcs_df.2, minst_pcs_df.3)
 ggplot(data = minst_pcs_df, aes(fill = digit)) + aes(x = Value) + geom_boxplot() +xlab("PC Value") + facet_grid(. ~ PC) + ggtitle("PC Score Distributions")
 
 ```
-Looking at the graph of PC1, it has a separation of the digit '0' and '1' from the rest of the digit. The digit '0' tends to have PC1 values around -1400 to -700, while the digit '1' have PC1 values around or slightly below 1000. The rest of the digits are in a mix between the digit '0' and '1' between -1000 and 800.
+Looking at the graph of PC1, it has a separation of the digit '0' and '1' from the rest of the digit. The digit '0' tends to have PC1 values around 700 to 1300, while the digit '1' have PC1 values around or slightly below -1000. The rest of the digits are in a mix between the values of the digit '0' and '1.'
 
-There are no clear clustering digit-wise in the graph of PC2 in comparison to PC1. However, it was able to separate the group of digits 9, 7, and 4 in a clear-cut way from the rest of the digits.
+There are no clear clustering digit-wise in the graph of PC2 in comparison to PC1. However, it was able to separate the group of digits 9, 7, and 4, which all has similar PC score, from the rest of the digits.
 
 The plot of PC3 shows less pattern than PC1 or PC2. However, it can still be distinguished that there is a band of digit 1 around the PC3 value of 0. The remaining digits are more more scattered.
 
@@ -264,6 +246,13 @@ minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "P
 colnames(minst_pcs_pair_df)[4] <- "PC3"
 ggpairs(data=minst_pcs_pair_df, title = "Pairwise PC Plot", columns = 2:4, upper = list(continuous = "points"), mapping = ggplot2::aes(color = digit), legend = 1)
 ```
+Since the first 2 PC only explains about 16-17% of the variations, it is no surprise that the data blends together on the plot. There are no clear-cut spaces between sets of points located in separate regions of the plot. However, a few notable patterns still emerge.
+
+When plotting PC2 vs PC1 against each other, with the lower PCs on the X axis, it seems that digit 0 and digits 4, 7 (which overlaps with 0 on both PC1 and PC2), are grouped together in the upper left corner of the plot. Whereas PC1 fails to distinguish digits 6, 8, 3, and 2 from each other, they are more separated in the combined plot, shifting to the bottom and bottom right from the top left corner. Finally, digit 1 is highly concentrated in the bottom left corner, but with overlaps from the other digits. Digit 0 is more concentrated at the right most part of the plot, but it still overlaps with 6 and 3.
+
+Plotting PC3 vs PC1, the addition of PC3 didn't really contribute much to the distinctions offered by PC1, since there are no vertical displacement between the digits, and the digits are just shifted on the X(PC1) axis.
+
+Comparing PC3 vs PC2, PC3 also did not contribute much to the separation of the digits, since the different digits are still mostly shifted on the X axis. 
 
 # Clustering
 14. Next we would like to perform a cluster analysis on the data. Explain intuitively what that means. What exactly is a cluster? What are the objects being clustered? Why might this be helpful for this dataset?
@@ -275,11 +264,8 @@ Cluster analysis aims to divides the data into different subgroups based on thei
 We use K-means algorithm for clustering. From our previous PCA analysis, we noticed that 80% of the predictive information contained within the data can be captured by first 43 PCs, so we decided to use the first 43 PCs for analysis instead of the total 784 pixels. Since we want to categorize the images into digits from 0-9, we pick k value as 10 to cluster the images into 10 categories.  
 
 ```{r, eval = FALSE}
-library(tidyverse)  # data manipulation
-library(cluster)    # clustering algorithms
-library(factoextra) # clustering algorithms & visualization
 minst_kmeans_df = minst_pcs$x[, 1:43]
-k10 <- kmeans(minst_kmeans_df, centers = 10, nstart = 25)
+k10 <- kmeans(minst_kmeans_df, centers = 10, nstart = 25, iter.max = 100)
 
 # plots to compare
 fviz_cluster(k10, geom = "point", data = minst_kmeans_df) + ggtitle("k = 10")
@@ -290,10 +276,6 @@ fviz_cluster(k10, geom = "point", data = minst_kmeans_df) + ggtitle("k = 10")
 
 Homogeneity means all of the observations with the same class label are in the same cluster. We noticed that the standard deviation of all clusters are less than 3, and most of them are less than or around 2, so we can say that the clusters are relatively homogeneous. 
 
-```{r}
-minst_pcs_df
-```
-
 ```{r, eval = FALSE}
 # Summarize results of clustering.
 minst_pcs_cluster_df <- cbind(minst_pcs_df[minst_pcs_df$PC == "PC1", c(1)], k10$cluster)
@@ -301,6 +283,7 @@ minst_pcs_cluster_df <- data.frame(minst_pcs_cluster_df)
 minst_pcs_cluster_df[,1] <- minst_pcs_cluster_df[,1] -1
 colnames(minst_pcs_cluster_df)[1] <- "digit"
 colnames(minst_pcs_cluster_df)[2] <- "cluster"
+
 minst_pcs_cluster_df
 
 summary_cluster.1 <- c(summary(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 1, ]$digit), sd(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 1, ]$digit))
@@ -320,7 +303,7 @@ summary_cluster
 ```
 
 17. What is the within-cluster sum of squares for the clusters you found? How does this compare to the total sum of squares?
-The within-cluster sum of squares of all clusters are shown in the table. We observed that only cluster 1 has much less sum of squares compared to the total sum of squares, and cluster 2, 6, 7, 8, 9 are slightly less than the total sum of squares. All other clusters have more sum of squares than the total sum of squares. 
+
 ```{r, eval = FALSE}
 # Compute sums of squares.
 withinclustersos <- data.frame(k10$withinss)
@@ -330,6 +313,8 @@ for(i in 1:10){
 withinclustersos
 k10$tot.withinss
 ```
+
+The within-cluster sum of squares of all clusters are shown in the table. We observed that cluster 1, 6, 8, and 7 have high within-cluster sum of squares on the same order of magnitude of the total sum of squares. Cluster 2, 3, 5, and 7 have relatively low within-cluster sum of squares that are approximately 20 times less than the total sum of squares. Cluster 4 and 9 have the medium sum of squares relative to the others, and 10 times less than the total sum of squares. 
 
 18. Plot the first 3 PCs against one another again but include the cluster label for each point. Do any patterns emerge? Comment on what you see.
 
@@ -341,7 +326,7 @@ minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "P
 colnames(minst_pcs_pair_df)[3] <- "PC2"
 minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC3", c(3)])
 colnames(minst_pcs_pair_df)[4] <- "PC3"
-minst_pcs_cluster_pair_df <- cbind(minst_pcs_pair_df, k10$cluster)
+minst_pcs_cluster_pair_df <- cbind(minst_pcs_pair_df, factor(k10$cluster))
 colnames(minst_pcs_cluster_pair_df)[5] <- "cluster"
 head(minst_pcs_cluster_pair_df)
 ggpairs(data=minst_pcs_cluster_pair_df, title = "Pairwise PC Plot with Cluster", columns = 2:4, upper = list(continuous = "points"), mapping = ggplot2::aes(color = cluster), legend = 1)
@@ -366,7 +351,7 @@ for (i in 1:10){
   for (j in 1:10){
     cluster_label_table[i, j] <- nrow(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == i & minst_pcs_cluster_df$digit == (j-1),])
   }
- colnames(cluster_label_table)[i] <- paste0("Class", i-1)
+ colnames(cluster_label_table)[i] <- paste0("Digit", i-1)
 }
 cluster_total <- data.frame()
 for (i in 1:10){
@@ -386,7 +371,7 @@ From the table, we can observe that cluster1, cluster6, cluster7, cluster8 are m
 We broke our dataset of 5000 obserbations in to 4000 images of training set and 1000 images of test set. We will need to utilize the training set to train and refine our model for classification, and the test set is used to examine the effectiveness and accuracy of our prediction model. 
 ```{r, eval = FALSE}
 # Break into train and test sets.
-minst_classification <- minst_final.together ##load data
+minst_classification <- minst_sample.together ##load data
 
 #Generate a random number that is 80% of the total number of rows in dataset.
 ran <- sample(1:nrow(minst_classification), 0.8 * nrow(minst_classification)) 
@@ -437,7 +422,7 @@ accuracy(tab)
 #tab
 #plot(tab)
 
-library(caret)
+
 cm <- confusionMatrix(factor(minst_test_predict), factor(minst_test_category), dnn = c("Prediction", "Label"))
 
 ggplot(as.data.frame(cm$table), aes(Prediction,sort(Label,decreasing = T), fill= Freq)) +
