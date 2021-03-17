@@ -386,46 +386,68 @@ From the table, we can observe that cluster1, cluster6, cluster7, cluster8 are m
 We broke our dataset of 5000 obserbations in to 4000 images of training set and 1000 images of test set. We will need to utilize the training set to train and refine our model for classification, and the test set is used to examine the effectiveness and accuracy of our prediction model. 
 ```{r, eval = FALSE}
 # Break into train and test sets.
-split_minst <- function (minst, digit, train_amount = 400, test_amount = 100) {
-  selected_digit <- minst[minst[["digit"]] == digit, ]
-  train_rows <- sample(nrow(selected_digit), train_amount)
-  train_sample <- minst[train_rows, ]
-  remainder <- minst[-train_rows, ]
-  test_rows <- sample(nrow(remainder), test_amount)
-  test_sample <- remainder[test_rows, ]
-  return(list(train = train_sample, test = test_sample))
-}
-minst.train <- read.csv("minst_train.csv")
-minst.test <- read.csv("minst_test.csv")
-minst.combined <- rbind(minst.train, minst.test)
+minst_classification <- minst_final.together ##load data
 
-minst_final.test <- data.frame()
-minst_final.train <- data.frame()
-for(i in 0:9) {
-  sampled <- split_minst(minst.combined, i)
-  minst_final.test <- rbind(minst_final.test, sampled$test)
-  minst_final.train <- rbind(minst_final.train, sampled$train)
-}
-minst_final.together <- rbind(minst_final.train, minst_final.test)
+#Generate a random number that is 80% of the total number of rows in dataset.
+ran <- sample(1:nrow(minst_classification), 0.8 * nrow(minst_classification)) 
+ 
+#extract training set
+minst_classification_train <- minst_classification[ran,] 
+#extract testing set
+minst_classification_test <- minst_classification[-ran,] 
 ```
 
 23. Using the class labels based on the categorical variable you chose earlier, apply a classification method to the training set. Be sure to specify any free parameters that were chosen. What is the accuracy of the fitted model on the training set?
+We use KNN Classification method with k values 5 on the training set. We calcualted the accuracy of the fitted model on the training set as 96. 
 ```{r, eval = FALSE}
 # Run classification algorithm.
 # Compute training set accuracy.
 
+# extract labels for training
+minst_target_category <- minst_classification[ran,1]
+# extract test labels to test accuracy
+minst_test_category <- minst_classification[-ran,1]
+library(class)
+
+minst_train_predict <- knn(minst_classification_train,minst_classification_train,cl=minst_target_category,k=5)
+
+# compute accuracy on training set
+tab_train <- table(minst_train_predict,minst_target_category)
+accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+accuracy(tab_train)
 ```
 
 24. What is the accuracy of the fitted model on the test set? How does this compare to the accuracy on the training set? Does this make sense? Explain why or why not.
+
+We the run the fitted model on the test set and get the accuracy value 92.9. It's a bit lower compared to the training set, but the accuracy is still quite high. Since our model is trained based on the training set, it intuitively makes sense that the test set might have lower accuracy compared to the training set. 
 ```{r, eval = FALSE}
+# run knn, and we store our prediction value in minst_test_predict
+minst_test_predict <- knn(minst_classification_train,minst_classification_test,cl=minst_target_category,k=5)
 # Compute accuracy on test set.
+tab <- table(minst_test_predict,minst_test_category)
+accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+accuracy(tab)
 ```
 
 25. Construct a confusion matrix based on the results of classification. Were there any classes on which your algorithm performed better than others? What about worse than others? Does this make sense based on the nature of the data?
 ```{r, eval = FALSE}
 # Find classes where the algorithm performed best / worst.
-```
+##create confusion matrix
+#tab <- table(minst_test_predict,minst_test_category)
+#tab
+#plot(tab)
 
+library(caret)
+cm <- confusionMatrix(factor(minst_test_predict), factor(minst_test_category), dnn = c("Prediction", "Label"))
+
+ggplot(as.data.frame(cm$table), aes(Prediction,sort(Label,decreasing = T), fill= Freq)) +
+        geom_tile() + geom_text(aes(label=Freq)) +
+        scale_fill_gradient(low="white", high="#009194") +
+        labs(x = "Label",y = "Prediction") +
+        scale_x_discrete(labels=c("Class_0", "Class_1","Class_2","Class_3","Class_4", "Class_5", "Class_6", "Class_7", "Class_8", "Class_9")) +
+        scale_y_discrete(labels=c("Class_9", "Class_8", "Class_7", "Class_6", "Class_5", "Class_4","Class_3","Class_2","Class_1", "Class_0"))
+```
+According to the matrix, our algorithm predicts class1 and class7 much better than others, and it predicts class 2, 8, 9 much worse than others. Such condition makes sense because by nature 8 and 9 might be easily get confused since they are both round, while 1 and 7 are much easier to tell because 1 is straight and 7 has clearer edges. 
 
 # Conclusion
 *{Fill in your conclusion}*
