@@ -276,12 +276,18 @@ k10
 
 Homogeneity means all of the observations with the same class label are in the same cluster. The cluster 7 and 9 are relatively homogeneous as their standard deviation for labels are only around 1, all other clusters have higher standard deviations are are relatively heterogeneous. 
 
+```{r}
+minst_pcs_df
+```
+
 ```{r, eval = FALSE}
 # Summarize results of clustering.
 minst_pcs_cluster_df <- cbind(minst_pcs_df[minst_pcs_df$PC == "PC1", c(1)], k10$cluster)
 minst_pcs_cluster_df <- data.frame(minst_pcs_cluster_df)
+minst_pcs_cluster_df[,1] <- minst_pcs_cluster_df[,1] -1
 colnames(minst_pcs_cluster_df)[1] <- "digit"
 colnames(minst_pcs_cluster_df)[2] <- "cluster"
+minst_pcs_cluster_df
 
 summary_cluster.1 <- c(summary(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 1, ]$digit), sd(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 1, ]$digit))
 summary_cluster.2 <- c(summary(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 2, ]$digit), sd(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 2, ]$digit))
@@ -332,13 +338,6 @@ head(minst_pcs_cluster_pair_df)
 ggpairs(data=minst_pcs_cluster_pair_df, title = "Pairwise PC Plot with Cluster", columns = 2:4, upper = list(continuous = "points"), mapping = ggplot2::aes(color = cluster), legend = 1)
 
 ```
-```{r}
-pairs(pcs$x, col = species)
-```
-
-```{r}
-summary(minst_pcs_cluster_pair_df$cluster)
-```
 
 # Classification
 19. Next we would like to perform classification on the data. Explain intuitively what that means. What does it mean to classify the data? What are the objects being classified? Why might this be of interest for this dataset?
@@ -352,12 +351,21 @@ For our dataset, we only have numerical variables since they are pixel values at
 21. Construct a table that describes how many samples in each class fall into each cluster. How well was your previous cluster analysis able to identify the classes you chose? Are any of the clusters comprised mostly by one class?
 ```{r, eval=FALSE}
 # Construct table.
+cluster_label_table <- data.frame()
+for (i in 1:10){
+  for (j in 1:10){
+    cluster_label_table[i, j] <- nrow(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == i & minst_pcs_cluster_df$digit == (j-1),])
+  }
+  row.names(cluster_label_table)[i] <- paste0("Cluster", i) 
+ colnames(cluster_label_table)[i] <- paste0("Class", i-1)
+}
+cluster_label_table
 ```
 
 22. Randomly break your dataset into a training set (roughly 80% of the data) and a test set (roughly 20% of the data). What is the point of doing this before doing classification?
 ```{r, eval = FALSE}
 # Break into train and test sets.
-split_minst <- function (minst, digit, train_amount = 2400, test_amount = 600) {
+split_minst <- function (minst, digit, train_amount = 400, test_amount = 100) {
   selected_digit <- minst[minst[["digit"]] == digit, ]
   train_rows <- sample(nrow(selected_digit), train_amount)
   train_sample <- minst[train_rows, ]
