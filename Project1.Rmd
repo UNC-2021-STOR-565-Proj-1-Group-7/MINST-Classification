@@ -28,6 +28,7 @@ library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
 library(factoextra) # clustering algorithms & visualization
 library(caret)
+library(class)
 ```
 
 
@@ -264,11 +265,12 @@ Cluster analysis aims to divides the data into different subgroups based on thei
 We use K-means algorithm for clustering. From our previous PCA analysis, we noticed that 80% of the predictive information contained within the data can be captured by first 43 PCs, so we decided to use the first 43 PCs for analysis instead of the total 784 pixels. Since we want to categorize the images into digits from 0-9, we pick k value as 10 to cluster the images into 10 categories.  
 
 ```{r, eval = FALSE}
-minst_kmeans_df = minst_pcs$x[, 1:43]
-k10 <- kmeans(minst_kmeans_df, centers = 10, nstart = 25, iter.max = 100)
+k <- 9
+minst_kmeans_df = minst_pcs$x[, 1:11]
+k_cluster <- kmeans(minst_kmeans_df, centers = k, nstart = 25, iter.max = 100)
 
 # plots to compare
-fviz_cluster(k10, geom = "point", data = minst_kmeans_df) + ggtitle("k = 10")
+fviz_cluster(k_cluster, geom = "point", data = minst_kmeans_df) + ggtitle("KMeans Clusters")
 #k10
 ```
 
@@ -278,43 +280,34 @@ Homogeneity means all of the observations with the same class label are in the s
 
 ```{r, eval = FALSE}
 # Summarize results of clustering.
-minst_pcs_cluster_df <- cbind(minst_pcs_df[minst_pcs_df$PC == "PC1", c(1)], k10$cluster)
+minst_pcs_cluster_df <- cbind(minst_sample.together[, c(1)], k_cluster$cluster)
 minst_pcs_cluster_df <- data.frame(minst_pcs_cluster_df)
-minst_pcs_cluster_df[,1] <- minst_pcs_cluster_df[,1] -1
+minst_pcs_cluster_df[,1] <- factor(minst_pcs_cluster_df[,1])
+minst_pcs_cluster_df[,2] <- factor(minst_pcs_cluster_df[,2])
 colnames(minst_pcs_cluster_df)[1] <- "digit"
 colnames(minst_pcs_cluster_df)[2] <- "cluster"
 
-minst_pcs_cluster_df
-
-summary_cluster.1 <- c(summary(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 1, ]$digit), sd(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 1, ]$digit))
-summary_cluster.2 <- c(summary(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 2, ]$digit), sd(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == 2, ]$digit))
-summary_cluster <- cbind(summary_cluster.1, summary_cluster.2)
-summary_cluster <- data.frame(summary_cluster)
-#sd(minst_pcs_cluster_df.1$digit)
-for(i in 3:10) {                                   
-  new <- c(summary(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == i, ]$digit), sd(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == i, ]$digit))                      
-  summary_cluster[, ncol(summary_cluster)+1] <- new                 
-}
-for (i in 1:10){
-  colnames(summary_cluster)[i] <- paste0("Cluster", i) 
-}
-row.names(summary_cluster)[7] <- "sd"
-summary_cluster
+ggplot(data = minst_pcs_cluster_df, aes(fill = digit)) + aes(x = cluster) + geom_bar()
 ```
 
 17. What is the within-cluster sum of squares for the clusters you found? How does this compare to the total sum of squares?
 
 ```{r, eval = FALSE}
 # Compute sums of squares.
-withinclustersos <- data.frame(k10$withinss)
-for(i in 1:10){
+withinclustersos <- data.frame(k_cluster$withinss)
+for(i in 1:k){
   row.names(withinclustersos)[i] <- paste0("Cluster", i) 
 }
-withinclustersos
-k10$tot.withinss
+
+compared_to_total <- withinclustersos[, 1] / k_cluster$tot.withinss
+withinclustersos <- cbind(withinclustersos, compared_to_total)
+withinclustersos <- rbind(withinclustersos, c(k_cluster$tot.withinss, 1))
+rownames(withinclustersos)[k + 1] <- "Total"
+colnames(withinclustersos) <- c("Within.Cluster", "Compared.Total")
+withinclustersos[order(withinclustersos$Compared.Total), ]
 ```
 
-The within-cluster sum of squares of all clusters are shown in the table. We observed that cluster 1, 6, 8, and 7 have high within-cluster sum of squares on the same order of magnitude of the total sum of squares. Cluster 2, 3, 5, and 7 have relatively low within-cluster sum of squares that are approximately 20 times less than the total sum of squares. Cluster 4 and 9 have the medium sum of squares relative to the others, and 10 times less than the total sum of squares. 
+The within-cluster sum of squares of all clusters, and their ratio to the total sum of squares are shown in the table. We observed that the clusters 5, 6, 7, 9 have low sum of squares. The clusters 10, 4, and 8 have medium sum of squares, and the clusters 2, 1, and 3 have high sum of squares. The magnitude of the sum of squares roughly correspond to the 
 
 18. Plot the first 3 PCs against one another again but include the cluster label for each point. Do any patterns emerge? Comment on what you see.
 
@@ -328,7 +321,6 @@ minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "P
 colnames(minst_pcs_pair_df)[4] <- "PC3"
 minst_pcs_cluster_pair_df <- cbind(minst_pcs_pair_df, factor(k10$cluster))
 colnames(minst_pcs_cluster_pair_df)[5] <- "cluster"
-head(minst_pcs_cluster_pair_df)
 ggpairs(data=minst_pcs_cluster_pair_df, title = "Pairwise PC Plot with Cluster", columns = 2:4, upper = list(continuous = "points"), mapping = ggplot2::aes(color = cluster), legend = 1)
 
 ```
@@ -347,19 +339,19 @@ For our dataset, we have one categorical variable, which is the labeled digit of
 ```{r, eval=FALSE}
 # Construct table.
 cluster_label_table <- data.frame()
-for (i in 1:10){
-  for (j in 1:10){
+for (i in 1:k){
+  for (j in 1:k){
     cluster_label_table[i, j] <- nrow(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == i & minst_pcs_cluster_df$digit == (j-1),])
   }
  colnames(cluster_label_table)[i] <- paste0("Digit", i-1)
 }
 cluster_total <- data.frame()
-for (i in 1:10){
+for (i in 1:k){
   cluster_total[i, 1] <- nrow(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == i,])
 }
 cluster_label_table <-  cbind(cluster_total, cluster_label_table)
 colnames(cluster_label_table)[1] <- "Total"
-for (i in 1:10){
+for (i in 1:k){
   row.names(cluster_label_table)[i] <- paste0("Cluster", i)
 }
 cluster_label_table
@@ -377,9 +369,10 @@ minst_classification <- minst_sample.together ##load data
 ran <- sample(1:nrow(minst_classification), 0.8 * nrow(minst_classification)) 
  
 #extract training set
-minst_classification_train <- minst_classification[ran,] 
+minst_classification_train <- minst_classification[ran, -c(1)] 
 #extract testing set
-minst_classification_test <- minst_classification[-ran,] 
+minst_classification_test <- minst_classification[-ran, -c(1)] 
+
 ```
 
 23. Using the class labels based on the categorical variable you chose earlier, apply a classification method to the training set. Be sure to specify any free parameters that were chosen. What is the accuracy of the fitted model on the training set?
@@ -388,13 +381,15 @@ We use KNN Classification method with k values 5 on the training set. We calcual
 # Run classification algorithm.
 # Compute training set accuracy.
 
+pcs_classify <- 43
+minst_classification_train_pcs <- prcomp(minst_classification_train)
+
 # extract labels for training
 minst_target_category <- minst_classification[ran,1]
 # extract test labels to test accuracy
 minst_test_category <- minst_classification[-ran,1]
-library(class)
 
-minst_train_predict <- knn(minst_classification_train,minst_classification_train,cl=minst_target_category,k=5)
+minst_train_predict <- knn(minst_classification_train_pcs$x[, 1:pcs_classify],minst_classification_train_pcs$x[, 1:pcs_classify],cl=minst_target_category,k=5)
 
 # compute accuracy on training set
 tab_train <- table(minst_train_predict,minst_target_category)
@@ -407,7 +402,9 @@ accuracy(tab_train)
 We the run the fitted model on the test set and get the accuracy value 92.9. It's a bit lower compared to the training set, but the accuracy is still quite high. Since our model is trained based on the training set, it intuitively makes sense that the test set might have lower accuracy compared to the training set. 
 ```{r, eval = FALSE}
 # run knn, and we store our prediction value in minst_test_predict
-minst_test_predict <- knn(minst_classification_train,minst_classification_test,cl=minst_target_category,k=5)
+minst_classification_test_pcs <- predict(minst_classification_train_pcs, newdata = minst_classification_test)
+minst_classification_test_pcs <- as.data.frame(minst_classification_test_pcs)
+minst_test_predict <- knn(minst_classification_train_pcs$x[, 1:pcs_classify],minst_classification_test_pcs[, 1:pcs_classify],cl=minst_target_category,k=5)
 # Compute accuracy on test set.
 tab <- table(minst_test_predict,minst_test_category)
 accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
