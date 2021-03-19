@@ -569,7 +569,7 @@ confusion.raw <-
   labs(x = "Label", y = "Prediction") + scale_x_discrete(labels = paste0("D", 0:9)) + 
   scale_y_discrete(labels = paste0("D", 0:9)) + ggtitle("KNN Confusion Raw")
 
-confusion.raw <-
+confusion.pcs <-
   ggplot(as.data.frame(cm.pcs$table),
          aes(Prediction, sort(Label, decreasing = T), fill = Freq)) + 
   geom_tile() + geom_text(aes(label = Freq)) + 
@@ -577,7 +577,7 @@ confusion.raw <-
   labs(x = "Label", y = "Prediction") + scale_x_discrete(labels = paste0("D", 0:9)) + 
   scale_y_discrete(labels = paste0("D", 0:9)) + ggtitle("KNN Confusion PC43")
 
-gridExtra::grid.arrange(confusion.raw, confuion.pcs, ncol = 2)
+gridExtra::grid.arrange(confusion.raw, confusion.pcs, ncol = 2)
 
 ```
 According to the matrices, the KNN on the raw data and the projected data both performed decently on all of the digits. They also make the same kind of mis-classification, but the model on the 43 PCs are slightly more sensitive in some cases.
