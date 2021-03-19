@@ -46,22 +46,23 @@ Since our dataset has 70000 observations in total, and it may take long to train
 #minst.train_raw <- minst_data$train
 #minst.test_raw <- minst_data$test
 
+
 preprocess_minst <- function (images, labels) {
   image_col_names = c("digit")
-  for (i in 1:length(images[1, ])) {
+  for (i in 1:length(images[1,])) {
     image_col_names = c(image_col_names, sprintf("p_%d", i))
   }
-
+  
   result <- as.data.frame(cbind(labels, images))
   colnames(result) <- image_col_names
   return(result)
 }
 
 split_minst <- function (minst, digit, sample_size = 500) {
-  selected_digit <- minst[minst[["digit"]] == digit, ]
+  selected_digit <- minst[minst[["digit"]] == digit,]
   sampled_rows <- sample(nrow(selected_digit), sample_size)
   
-  return(selected_digit[sampled_rows, ])
+  return(selected_digit[sampled_rows,])
 }
 
 #minst.train <- preprocess_minst(minst.train_raw$images, minst.train_raw$labels)
@@ -72,7 +73,7 @@ minst.test <- read.csv("minst_test.csv")
 minst.combined <- rbind(minst.train, minst.test)
 
 minst_sample.together <- data.frame()
-for(i in 0:9) {
+for (i in 0:9) {
   sampled <- split_minst(minst.combined, i)
   minst_sample.together <- rbind(minst_sample.together, sampled)
 }
@@ -110,7 +111,7 @@ Mode <- function(x) {
   return(ux[which.max(tabulate(match(x, ux)))])
 }
 
-image_only_minst <- minst_sample.together[, -c(1)]
+image_only_minst <- minst_sample.together[,-c(1)]
 flattened_images <- as.vector(t(image_only_minst))
 
 center_pixels <- as.vector(t(minst_sample.together["p_392"]))
@@ -146,16 +147,28 @@ Rather than give a summary for each of the 784 pixels in each image, instead we 
 
 5. Pick three variables in your dataset and visualize the distribution of each in separate plots. Remember to properly title and label each plot. Compare them and comment on what you see. Do any of the distributions appear similar or different? In what ways?
 ```{r warning = FALSE, message = FALSE}
-ggplot(data = minst_sample.together, aes(x = p_457)) + geom_histogram() + ggtitle("Distribution of Pixel 457") + xlab("Pixel Values") + ylab("Frequency")
-ggplot(data = minst_sample.together, aes(x = p_1)) + geom_histogram(binwidth = 1) + ggtitle("Distribution of Pixel 1") + xlab("Pixel Values") + ylab("Frequency")
-ggplot(data = minst_sample.together, aes(x = p_537)) + geom_histogram() + ggtitle("Distribution of Pixel 536") + xlab("Pixel Values") + ylab("Frequency")
+ggplot(data = minst_sample.together, aes(x = p_457)) + 
+  geom_histogram() + ggtitle("Distribution of Pixel 457") + 
+  xlab("Pixel Values") + ylab("Frequency")
+ggplot(data = minst_sample.together, aes(x = p_1)) + 
+  geom_histogram(binwidth = 1) + ggtitle("Distribution of Pixel 1") + 
+  xlab("Pixel Values") + ylab("Frequency")
+ggplot(data = minst_sample.together, aes(x = p_537)) + 
+  geom_histogram() + ggtitle("Distribution of Pixel 536") + 
+  xlab("Pixel Values") + ylab("Frequency")
 ```
 As is clear in the histograms, we can clearly see that in pixel 1, a corner pixel, every image had a value of 0. This confirms the summary statistics in the previous section. Our other two chosen pixels, Pixel 457 and Pixel 537, had more interesting distributions. Pixel 457 still had mostly 0's, but also many 255's, with some much smaller frequency values spread out in between. Pixel 537 also had mostly 0's, with a very small amount of 255's, and almost no values in-between. As such, Pixel 537 resembled Pixel 1 fairly closely, with almost entirely 0's, whereas Pixel 457 had a slightly greater range of values.
 
 6. Pick two numerical variables in your dataset. What is their correlation? Visualize their joint behavior in a single plot. Does this suggest that there is a strong relationship between the two?
 ```{r warning = FALSE, message = FALSE}
 cor(minst_sample.together["p_455"], minst_sample.together["p_456"])
-plot(minst_sample.together$p_455, minst_sample.together$p_456, main = "Plot of Pixel 455 Values Vs. Pixel 456 Values", xlab = "Pixel 455 Values", ylab = "Pixel 456 Values")
+plot(
+  minst_sample.together$p_455,
+  minst_sample.together$p_456,
+  main = "Plot of Pixel 455 Values Vs. Pixel 456 Values",
+  xlab = "Pixel 455 Values",
+  ylab = "Pixel 456 Values"
+)
 ```
 Here, we arbitrarily chose to find the correlation between two pixels right next to each other (Pixels 455 and 456), expecting a reasonably strong correlation because of their proximity. We calculated the correlation between these two pixel values to be 0.779, a strong correlation. As can be seen in the plot, there are many data points clustered in the top corners of the plot, with the data becoming increasingly sparse toward the middle. Thus, the plot does suggest a reasonable amount of correlation betweene the variables. 
 
@@ -171,7 +184,11 @@ We can initially see that the means of the pixel darkness in Pixel 456 and Pixel
 ```{r warning = FALSE, message = FALSE}
 means <- apply(minst_sample.together, 2, mean)
 sds <- apply(minst_sample.together, 2, sd)
-plot(means, sds, main = "Plot of Means vs. Standard Deviations", xlab = "Means", ylab = "Standard Deviations")
+plot(means,
+     sds,
+     main = "Plot of Means vs. Standard Deviations",
+     xlab = "Means",
+     ylab = "Standard Deviations")
 ```
 Looking at the graph, there does appear to be one distinct outlier near the bottom left, but otherwise the points all follow a very clear trend.
 
@@ -189,7 +206,7 @@ For instance, with our dataset, it would be highly beneficial if we could reduce
 The principle components were calculated without scaling the values, since all pixels are on the same scale and range, and all numerical values indicate greyscale between 0 and 255.
 
 ```{r warning = FALSE, message = FALSE}
-minst_sample.together.numerical <- minst_sample.together[, -c(1)]
+minst_sample.together.numerical <- minst_sample.together[,-c(1)]
 minst_pcs <- prcomp(minst_sample.together.numerical, scale = FALSE)
 minst_pcs_sum <- summary(minst_pcs)
 print(as.data.frame(minst_pcs_sum$importance[, 1:5]))
@@ -197,8 +214,12 @@ print(as.data.frame(minst_pcs_sum$importance[, 1:5]))
 
 11. Plot a screeplot of the PCs. How many principal components are required to explain at least 80% of the variation in the data? Based on this and the plot, does it seem like PCA has done a good job in reducing the dimensionality of the data?
 ```{r warning = FALSE, message = FALSE}
-screeplot(minst_pcs, npcs = 50, type = "lines", main = "Variance explained by PC")
-cum_pcs_filtered <- minst_pcs_sum$importance[3, abs(minst_pcs_sum$importance[3, ] - 0.8) < 0.01]
+screeplot(minst_pcs,
+          npcs = 50,
+          type = "lines",
+          main = "Variance explained by PC")
+cum_pcs_filtered <-
+  minst_pcs_sum$importance[3, abs(minst_pcs_sum$importance[3,] - 0.8) < 0.01]
 cum_pcs_filtered <- as.data.frame(as.list(cum_pcs_filtered))
 rownames(cum_pcs_filtered) <- c("Cum. Variance Explained")
 print(cum_pcs_filtered)
@@ -208,30 +229,32 @@ From the screeplot and principal components, PCA has clearly done a great job re
 
 12. Visualize the distributions of the first 3 PCs in separate plots and comment. Are there any apparent clusters? Do any of the first 3 PCs appear most helpful for separating the data?
 ```{r warning = FALSE, message = FALSE}
-minst_pcs_df.1 <- data.frame(
-  PC = rep("PC1", length(minst_pcs$x[, 1])),
-  Value = minst_pcs$x[, 1]
-)
-minst_pcs_df.1 <- cbind(minst_sample.together["digit"], minst_pcs_df.1)
+minst_pcs_df.1 <-
+  data.frame(PC = rep("PC1", length(minst_pcs$x[, 1])),
+             Value = minst_pcs$x[, 1])
+minst_pcs_df.1 <-
+  cbind(minst_sample.together["digit"], minst_pcs_df.1)
 minst_pcs_df.1[, "digit"] <- factor(minst_pcs_df.1[, "digit"])
 
-minst_pcs_df.2 <- data.frame(
-  PC = rep("PC2", length(minst_pcs$x[, 2])),
-  Value = minst_pcs$x[, 2]
-)
-minst_pcs_df.2 <- cbind(minst_sample.together["digit"], minst_pcs_df.2)
+minst_pcs_df.2 <-
+  data.frame(PC = rep("PC2", length(minst_pcs$x[, 2])),
+             Value = minst_pcs$x[, 2])
+minst_pcs_df.2 <-
+  cbind(minst_sample.together["digit"], minst_pcs_df.2)
 minst_pcs_df.2[, "digit"] <- factor(minst_pcs_df.2[, "digit"])
 
-minst_pcs_df.3 <- data.frame(
-  PC = rep("PC3", length(minst_pcs$x[, 3])),
-  Value = minst_pcs$x[, 3]
-) 
-minst_pcs_df.3 <- cbind(minst_sample.together["digit"], minst_pcs_df.3)
+minst_pcs_df.3 <-
+  data.frame(PC = rep("PC3", length(minst_pcs$x[, 3])),
+             Value = minst_pcs$x[, 3])
+minst_pcs_df.3 <-
+  cbind(minst_sample.together["digit"], minst_pcs_df.3)
 minst_pcs_df.3[, "digit"] <- factor(minst_pcs_df.3[, "digit"])
 
-minst_pcs_df <- rbind(minst_pcs_df.1, minst_pcs_df.2, minst_pcs_df.3)
+minst_pcs_df <-
+  rbind(minst_pcs_df.1, minst_pcs_df.2, minst_pcs_df.3)
 
-ggplot(data = minst_pcs_df, aes(fill = digit)) + aes(x = Value) + geom_boxplot() +xlab("PC Value") + facet_grid(. ~ PC) + ggtitle("PC Score Distributions")
+ggplot(data = minst_pcs_df, aes(fill = digit)) + aes(x = Value) + geom_boxplot() +
+  xlab("PC Value") + facet_grid(. ~ PC) + ggtitle("PC Score Distributions")
 
 ```
 There are no clear cut lines that can cleanly separate the data points, disregarding their digit, from each other. Each bar graph overlaps with each other for all 3 PCs. However, when taking the digit into account, there are some separation either between groups of digits or single digits.
@@ -246,11 +269,20 @@ The plot of PC3 shows less pattern than PC1 or PC2. However, it can still be dis
 ```{r warning = FALSE, message = FALSE}
 minst_pcs_pair_df <- minst_pcs_df[minst_pcs_df$PC == "PC1", c(1, 3)]
 colnames(minst_pcs_pair_df)[2] <- "PC1"
-minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC2", c(3)])
+minst_pcs_pair_df <-
+  cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC2", c(3)])
 colnames(minst_pcs_pair_df)[3] <- "PC2"
-minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC3", c(3)])
+minst_pcs_pair_df <-
+  cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC3", c(3)])
 colnames(minst_pcs_pair_df)[4] <- "PC3"
-ggpairs(data=minst_pcs_pair_df, title = "Pairwise PC Plot", columns = 2:4, upper = list(continuous = "points"), mapping = ggplot2::aes(color = digit), legend = 1)
+ggpairs(
+  data = minst_pcs_pair_df,
+  title = "Pairwise PC Plot",
+  columns = 2:4,
+  upper = list(continuous = "points"),
+  mapping = ggplot2::aes(color = digit),
+  legend = 1
+)
 ```
 Since the first 2 PC only explains about 16-17% of the variations, it is no surprise that the data blends together on the plot. There are no clear-cut spaces between sets of points located in separate regions of the plot. However, a few notable patterns still emerge.
 
@@ -272,9 +304,16 @@ We use K-means algorithm for clustering. From our previous PCA analysis, we noti
 ```{r warning = FALSE, message = FALSE}
 k <- 10
 minst_kmeans_df_43 <- minst_pcs$x[, 1:43]
-k_cluster_43 <- kmeans(minst_kmeans_df_43, centers = k, nstart = 25, iter.max = 1000)
+k_cluster_43 <-
+  kmeans(
+    minst_kmeans_df_43,
+    centers = k,
+    nstart = 25,
+    iter.max = 1000
+  )
 # plots to compare
-fviz_43 <- fviz_cluster(k_cluster_43, geom = "point", data = minst_kmeans_df_43) + ggtitle("KMeans Clusters 43 PCs")
+fviz_43 <-
+  fviz_cluster(k_cluster_43, geom = "point", data = minst_kmeans_df_43) + ggtitle("KMeans Clusters 43 PCs")
 
 print(fviz_43)
 ```
@@ -283,14 +322,16 @@ print(fviz_43)
 
 ```{r warning = FALSE, message = FALSE}
 # Summarize results of clustering.
-minst_pcs_cluster_df.43 <- cbind(minst_sample.together[, c(1)], k_cluster_43$cluster)
+minst_pcs_cluster_df.43 <-
+  cbind(minst_sample.together[, c(1)], k_cluster_43$cluster)
 minst_pcs_cluster_df.43 <- data.frame(minst_pcs_cluster_df.43)
-minst_pcs_cluster_df.43[,1] <- factor(minst_pcs_cluster_df.43[,1])
-minst_pcs_cluster_df.43[,2] <- factor(minst_pcs_cluster_df.43[,2])
+minst_pcs_cluster_df.43[, 1] <- factor(minst_pcs_cluster_df.43[, 1])
+minst_pcs_cluster_df.43[, 2] <- factor(minst_pcs_cluster_df.43[, 2])
 colnames(minst_pcs_cluster_df.43)[1] <- "digit"
 colnames(minst_pcs_cluster_df.43)[2] <- "cluster"
 
-cluster_bar_43 <- ggplot(data = minst_pcs_cluster_df.43, aes(fill = digit)) + aes(x = cluster) + geom_bar() + xlab("Cluster") + ylab("Count") + ggtitle("Clusters with 43 PCs")
+cluster_bar_43 <-
+  ggplot(data = minst_pcs_cluster_df.43, aes(fill = digit)) + aes(x = cluster) + geom_bar() + xlab("Cluster") + ylab("Count") + ggtitle("Clusters with 43 PCs")
 print(cluster_bar_43)
 ```
 Since the dimensionality of the clusters is still pretty high, it is difficult to fully visualize. When projecting to 2 dimensions, it is no surprise that the clusters blend together, since 2 dimension is inadequate at capturing the full information contained in all 43 dimensions. However, in regards to the digits, the clusters do reveal some patterns in composition.
@@ -304,16 +345,18 @@ From the composition of the clusters, it seems that the data points of digit 0, 
 ```{r warning = FALSE, message = FALSE}
 # Compute sums of squares.
 withinclustersos <- data.frame(k_cluster_43$withinss)
-for(i in 1:k){
-  row.names(withinclustersos)[i] <- paste0("Cluster", i) 
+for (i in 1:k) {
+  row.names(withinclustersos)[i] <- paste0("Cluster", i)
 }
 
-compared_to_total <- withinclustersos[, 1] / k_cluster_43$tot.withinss
+compared_to_total <-
+  withinclustersos[, 1] / k_cluster_43$tot.withinss
 withinclustersos <- cbind(withinclustersos, compared_to_total)
-withinclustersos <- rbind(withinclustersos, c(k_cluster_43$tot.withinss, 1))
+withinclustersos <-
+  rbind(withinclustersos, c(k_cluster_43$tot.withinss, 1))
 rownames(withinclustersos)[k + 1] <- "Total"
 colnames(withinclustersos) <- c("Within.Cluster", "Compared.Total")
-print(withinclustersos[order(withinclustersos$Compared.Total), ])
+print(withinclustersos[order(withinclustersos$Compared.Total),])
 ```
 
 The within-cluster sum of squares of all clusters, and their ratio to the total sum of squares are shown in the table. We observed that the clusters 6, 8, 9, 4 have low sum of squares. The clusters 3 and 2 have medium sum of squares, and the clusters 1, 5, 7, and 10 have high sum of squares.
@@ -326,13 +369,23 @@ The clusters 6, 8, 9, 4 are all dominated by a single type of digit, as shown in
 # Plot PCs with clusters.
 minst_pcs_pair_df <- minst_pcs_df[minst_pcs_df$PC == "PC1", c(1, 3)]
 colnames(minst_pcs_pair_df)[2] <- "PC1"
-minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC2", c(3)])
+minst_pcs_pair_df <-
+  cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC2", c(3)])
 colnames(minst_pcs_pair_df)[3] <- "PC2"
-minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC3", c(3)])
+minst_pcs_pair_df <-
+  cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC3", c(3)])
 colnames(minst_pcs_pair_df)[4] <- "PC3"
-minst_pcs_cluster_pair_df <- cbind(minst_pcs_pair_df, factor(k_cluster_43$cluster))
+minst_pcs_cluster_pair_df <-
+  cbind(minst_pcs_pair_df, factor(k_cluster_43$cluster))
 colnames(minst_pcs_cluster_pair_df)[5] <- "cluster"
-ggpairs(data=minst_pcs_cluster_pair_df, title = "Pairwise PC Plot with Cluster", columns = 2:4, upper = list(continuous = "points"), mapping = ggplot2::aes(color = cluster), legend = 1)
+ggpairs(
+  data = minst_pcs_cluster_pair_df,
+  title = "Pairwise PC Plot with Cluster",
+  columns = 2:4,
+  upper = list(continuous = "points"),
+  mapping = ggplot2::aes(color = cluster),
+  legend = 1
+)
 
 ```
 Similar to the pairwise PCA plot from the previous section, the data points largely blends together in a 2-dimensional plot. However, with respect to the clusters, some pattern still emerges.
@@ -359,19 +412,22 @@ For our dataset, we have one categorical variable, which is the labeled digit of
 ```{r warning = FALSE, message = FALSE}
 # Construct table.
 cluster_label_table <- data.frame()
-for (i in 1:k){
-  for (j in 1:k){
-    cluster_label_table[i, j] <- nrow(minst_pcs_cluster_df.43[minst_pcs_cluster_df.43$cluster == i & minst_pcs_cluster_df.43$digit == (j-1),])
+for (i in 1:k) {
+  for (j in 1:k) {
+    cluster_label_table[i, j] <-
+      nrow(minst_pcs_cluster_df.43[minst_pcs_cluster_df.43$cluster == i &
+                                     minst_pcs_cluster_df.43$digit == (j - 1), ])
   }
- colnames(cluster_label_table)[i] <- paste0("Digit", i-1)
+  colnames(cluster_label_table)[i] <- paste0("Digit", i - 1)
 }
 cluster_total <- data.frame()
-for (i in 1:k){
-  cluster_total[i, 1] <- nrow(minst_pcs_cluster_df.43[minst_pcs_cluster_df.43$cluster == i,])
+for (i in 1:k) {
+  cluster_total[i, 1] <-
+    nrow(minst_pcs_cluster_df.43[minst_pcs_cluster_df.43$cluster == i, ])
 }
 cluster_label_table <-  cbind(cluster_total, cluster_label_table)
 colnames(cluster_label_table)[1] <- "Total"
-for (i in 1:k){
+for (i in 1:k) {
   row.names(cluster_label_table)[i] <- paste0("Cluster", i)
 }
 cluster_label_table
@@ -389,17 +445,21 @@ We also investigated whether using the principal components has any effect on th
 minst_classification <- minst_sample.together ##load data
 
 #Generate a random number that is 80% of the total number of rows in dataset.
-ran <- sample(1:nrow(minst_classification), 0.8 * nrow(minst_classification)) 
- 
+ran <-
+  sample(1:nrow(minst_classification),
+         0.8 * nrow(minst_classification))
+
 #extract training set
 pcs_classify <- 43
-minst_classification_train <- minst_classification[ran, -c(1)] 
+minst_classification_train <- minst_classification[ran,-c(1)]
 minst_classification_train_pcs <- prcomp(minst_classification_train)
 
 #extract testing set
-minst_classification_test <- minst_classification[-ran, -c(1)] 
-minst_classification_test_pcs <- predict(minst_classification_train_pcs, newdata = minst_classification_test)
-minst_classification_test_pcs <- as.data.frame(minst_classification_test_pcs)
+minst_classification_test <- minst_classification[-ran,-c(1)]
+minst_classification_test_pcs <-
+  predict(minst_classification_train_pcs, newdata = minst_classification_test)
+minst_classification_test_pcs <-
+  as.data.frame(minst_classification_test_pcs)
 ```
 
 23. Using the class labels based on the categorical variable you chose earlier, apply a classification method to the training set. Be sure to specify any free parameters that were chosen. What is the accuracy of the fitted model on the training set?
@@ -411,22 +471,36 @@ We use KNN Classification method with k values 5 on the training set.
 # Compute training set accuracy.
 
 # extract labels for training
-minst_target_category <- minst_classification[ran,1]
+minst_target_category <- minst_classification[ran, 1]
 # extract test labels to test accuracy
-minst_test_category <- minst_classification[-ran,1]
+minst_test_category <- minst_classification[-ran, 1]
 
-minst_train_predict.raw <- knn(minst_classification_train,minst_classification_train,cl=minst_target_category, k=5)
-minst_train_predict.pcs <- knn(minst_classification_train_pcs$x[, 1:pcs_classify],minst_classification_train_pcs$x[, 1:pcs_classify],cl=minst_target_category, k=5)
+minst_train_predict.raw <-
+  knn(
+    minst_classification_train,
+    minst_classification_train,
+    cl = minst_target_category,
+    k = 5
+  )
+minst_train_predict.pcs <-
+  knn(
+    minst_classification_train_pcs$x[, 1:pcs_classify],
+    minst_classification_train_pcs$x[, 1:pcs_classify],
+    cl = minst_target_category,
+    k = 5
+  )
 
 # compute accuracy on training set
-tab_train.pcs <- table(minst_train_predict.pcs,minst_target_category)
-tab_train.raw <- table(minst_train_predict.raw,minst_target_category)
-accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+tab_train.pcs <-
+  table(minst_train_predict.pcs, minst_target_category)
+tab_train.raw <-
+  table(minst_train_predict.raw, minst_target_category)
+accuracy <- function(x) {
+  sum(diag(x) / (sum(rowSums(x)))) * 100
+}
 
-train_result <- data.frame(
-  Raw = accuracy(tab_train.raw),
-  PC43 = accuracy(tab_train.pcs)
-)
+train_result <- data.frame(Raw = accuracy(tab_train.raw),
+                           PC43 = accuracy(tab_train.pcs))
 rownames(train_result) <- c("Accuracy")
 print(train_result)
 ```
@@ -437,17 +511,29 @@ We found that the accuracy of both the models on the training set to be between 
 
 ```{r warning = FALSE, message = FALSE}
 # run knn, and we store our prediction value in minst_test_predict
-minst_test_predict.pcs <- knn(minst_classification_train_pcs$x[, 1:pcs_classify],minst_classification_test_pcs[, 1:pcs_classify],cl=minst_target_category,k=5)
-minst_test_predict.raw <- knn(minst_classification_train,minst_classification_test,cl=minst_target_category,k=5)
+minst_test_predict.pcs <-
+  knn(
+    minst_classification_train_pcs$x[, 1:pcs_classify],
+    minst_classification_test_pcs[, 1:pcs_classify],
+    cl = minst_target_category,
+    k = 5
+  )
+minst_test_predict.raw <-
+  knn(
+    minst_classification_train,
+    minst_classification_test,
+    cl = minst_target_category,
+    k = 5
+  )
 # Compute accuracy on test set.
-test_tab.pcs <- table(minst_test_predict.pcs,minst_test_category)
-test_tab.raw <- table(minst_test_predict.raw,minst_test_category)
-accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+test_tab.pcs <- table(minst_test_predict.pcs, minst_test_category)
+test_tab.raw <- table(minst_test_predict.raw, minst_test_category)
+accuracy <- function(x) {
+  sum(diag(x) / (sum(rowSums(x)))) * 100
+}
 
-test_result <- data.frame(
-  Raw = accuracy(test_tab.raw),
-  PC43 = accuracy(test_tab.pcs)
-)
+test_result <- data.frame(Raw = accuracy(test_tab.raw),
+                          PC43 = accuracy(test_tab.pcs))
 
 rownames(test_result) <- c("Accuracy")
 print(test_result)
@@ -462,12 +548,34 @@ Regardless, it is surprising that both performed pretty well given that there is
 
 25. Construct a confusion matrix based on the results of classification. Were there any classes on which your algorithm performed better than others? What about worse than others? Does this make sense based on the nature of the data?
 ```{r warning = FALSE, message = FALSE}
-cm.pcs <- confusionMatrix(factor(minst_test_predict.pcs), factor(minst_test_category), dnn = c("Prediction", "Label"))
-cm.raw <- confusionMatrix(factor(minst_test_predict.raw), factor(minst_test_category), dnn = c("Prediction", "Label"))
+cm.pcs <-
+  confusionMatrix(
+    factor(minst_test_predict.pcs),
+    factor(minst_test_category),
+    dnn = c("Prediction", "Label")
+  )
+cm.raw <-
+  confusionMatrix(
+    factor(minst_test_predict.raw),
+    factor(minst_test_category),
+    dnn = c("Prediction", "Label")
+  )
 
-confusion.raw <- ggplot(as.data.frame(cm.raw$table), aes(Prediction,sort(Label,decreasing = T), fill= Freq)) + geom_tile() + geom_text(aes(label=Freq)) + scale_fill_gradient(low="white", high="#009194") + labs(x = "Label",y = "Prediction") + scale_x_discrete(labels=paste0("D", 0:9)) + scale_y_discrete(labels=paste0("D", 0:9)) + ggtitle("KNN Confusion Raw")
+confusion.raw <-
+  ggplot(as.data.frame(cm.raw$table),
+         aes(Prediction, sort(Label, decreasing = T), fill = Freq)) + 
+  geom_tile() + geom_text(aes(label = Freq)) + 
+  scale_fill_gradient(low = "white", high = "#009194") + 
+  labs(x = "Label", y = "Prediction") + scale_x_discrete(labels = paste0("D", 0:9)) + 
+  scale_y_discrete(labels = paste0("D", 0:9)) + ggtitle("KNN Confusion Raw")
 
-confuion.pcs <- ggplot(as.data.frame(cm.pcs$table), aes(Prediction,sort(Label,decreasing = T), fill= Freq)) + geom_tile() + geom_text(aes(label=Freq)) + scale_fill_gradient(low="white", high="#009194") + labs(x = "Label",y = "Prediction") + scale_x_discrete(labels=paste0("D", 0:9)) + scale_y_discrete(labels=paste0("D", 0:9)) + ggtitle("KNN Confusion PC43")
+confusion.raw <-
+  ggplot(as.data.frame(cm.pcs$table),
+         aes(Prediction, sort(Label, decreasing = T), fill = Freq)) + 
+  geom_tile() + geom_text(aes(label = Freq)) + 
+  scale_fill_gradient(low = "white", high = "#009194") + 
+  labs(x = "Label", y = "Prediction") + scale_x_discrete(labels = paste0("D", 0:9)) + 
+  scale_y_discrete(labels = paste0("D", 0:9)) + ggtitle("KNN Confusion PC43")
 
 gridExtra::grid.arrange(confusion.raw, confuion.pcs, ncol = 2)
 
