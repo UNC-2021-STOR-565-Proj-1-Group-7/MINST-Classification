@@ -1,5 +1,5 @@
 ---
-title: "{Fill in title}"
+title: "MINST handwritten digits report"
 author: "Shilong Dai, Alex Mangiapane, Yinuo Hu"
 header-includes:
 - \usepackage{amsgen,amsmath,amstext,amsbsy,amsopn,amssymb,mathabx,amsthm,bm,bbm}
@@ -17,6 +17,7 @@ Our report studied the MNIST handwritten digits data by conducting exploratory d
 # Introduction
 
 We used the MNIST handwritten digits dataset from http://yann.lecun.com/exdb/mnist/, which is a collection of grey-scale images of handwritten digits that contains 1 categorical variable indicating the label of digits (from 0-9) and 784 numerical variable representing the pixels of the images. Since some of the handwritten digits are curly and blur which may create difficulties for computers to classify, it is interesting to explore how well machine learning algorithms may perform for classification and clustering of these handwritten digits images. The applicability of machine learning to digit classification may be a useful endeavor in many fields, especially for postal services. An automatic identification of digit may save human resources, and also improves efficiency in jobs that involves recognizing visual, numerical inputs.
+Since our dataset have relatively high dimension, we might encounter the curse of dimensionality, for which the increasing number of attributes may deterioriating the predictive power of a classifier instead of improving steadily. We will apply principal component analysis for dimension reduction and we might apply clustering method on major PCs to avoid such issue. For classification we will compare the model trained with original high-dimension data and reduced-dimension data to compare the effectiveness of our model considering the problem of dimensionality.  
 
 # Setup
 ```{r}
