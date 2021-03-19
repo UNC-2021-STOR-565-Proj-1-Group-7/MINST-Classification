@@ -480,5 +480,5 @@ Both the raw and PC projected KNN did really well on labeling the digit 2. This 
 In general, it seems that in some cases the PC projected KNN offers more separation between the digits, and sometimes it reduces the separation. However, overall, it helps to distinguish some of the digits slightly more than KNN on just the raw data. This may be due to the fact that the Euclidean distance loses sensitivity as the dimensions increases. However, by using the 43 PCs, about 20% of the variations are not captured, and this may lead to greater confusion in some cases.
 
 # Conclusion
-*{Fill in your conclusion}*
+In conclusion, our classification of MNIST handwritten digits using machine learning techniques of PCA, unsupervised K-means clustering, and supervised KNN with greater than 95% accuracy proved successful. Those digits most often misclassified were typically predictable, given similarity in the structure of those digits, and with low frequency. Such analysis provides convincing evidence for the ability of machine learning techniques to translate human handwriting more generally into classified characters with high degrees of accuracy. Such results provide a solid foundation toward automating the computerization of handwritten data from medical records, postal services, or any number of other sources. 
 
