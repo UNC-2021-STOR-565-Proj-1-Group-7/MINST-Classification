@@ -12,12 +12,11 @@ subtitle: $\textbf{Machine Learning, Spring 2021}$
 ---
 
 # Abstract
-Our report studied the MNIST handwritten digits data by conducting exploratory data analysis, principal component analysis, unsupervised K-means clustering method, and supervised K-Nearest Neighbor classification algorithm. We firstly provided statistical summary of the MNIST handwritten digits data to have an overview of data information. Since our data contained high dimensions, we utilized principal component analysis for dimension reduction. Then we used both supervised and unsupervised methods to classify the images of handwritten digits. We applied k-means algorithm on dimension-reduced data to categorize the images in our data into 9 clusters. The KNN classification algorithm provides a better classification model for our data with more than 90% accuracy on both training and testing set. 
+Our report studied the MNIST handwritten digits data by conducting exploratory data analysis, principal component analysis, unsupervised K-means clustering method, and supervised K-Nearest Neighbor classification algorithm. First, We provided statistical summary of the MNIST handwritten digits data to show some of its distributions and variations. Since our data contained high dimensions, we utilized principal component analysis for dimension reduction. Then, we used unsupervised clustering algorithms to group the data into 10 clusters. Then, we studied the composition of the clusters in relation to the digit labels. Later, We applied KNN classification algorithm to classify the digits with 5 nearest neighbors. We found that KNN performs decently on the MNIST data set. Experimenting on the raw and dimension reduced data, the KNN algorithm is able to classify the training digits with greater than 95% accuracy, with a shrinkage of only 2-3% in both cases.
 
 # Introduction
 
-We used the MNIST handwritten digits dataset from http://yann.lecun.com/exdb/mnist/, which is a collection of grey-scale images of handwritten digits that contains 1 categorical variable indicating the label of digits (from 0-9) and 784 numerical variable representing the pixels of the images. Since some of the handwritten digits are curly and blur which may create difficulties for computers to classify, it is interesting to explore how well different machine learning algorithms may perform for classification of these handwritten digits images. The models we trained might be suitable for other future similar gary-scale image classification. 
-The MNIST has quite high dimension, and we were curious whether the high dimensionality will create any problem for classification. [NEED REVISION]
+We used the MNIST handwritten digits dataset from http://yann.lecun.com/exdb/mnist/, which is a collection of grey-scale images of handwritten digits that contains 1 categorical variable indicating the label of digits (from 0-9) and 784 numerical variable representing the pixels of the images. Since some of the handwritten digits are curly and blur which may create difficulties for computers to classify, it is interesting to explore how well machine learning algorithms may perform for classification and clustering of these handwritten digits images. The applicability of machine learning to digit classification may be a useful endeavor in many fields, especially for postal services. An automatic identification of digit may save human resources, and also improves efficiency in jobs that involves recognizing visual, numerical inputs.
 
 # Setup
 ```{r}
@@ -233,6 +232,8 @@ minst_pcs_df <- rbind(minst_pcs_df.1, minst_pcs_df.2, minst_pcs_df.3)
 ggplot(data = minst_pcs_df, aes(fill = digit)) + aes(x = Value) + geom_boxplot() +xlab("PC Value") + facet_grid(. ~ PC) + ggtitle("PC Score Distributions")
 
 ```
+There are no clear cut lines that can cleanly separate the data points, disregarding their digit, from each other. Each bar graph overlaps with each other for all 3 PCs. However, when taking the digit into account, there are some separation either between groups of digits or single digits.
+
 Looking at the graph of PC1, it has a separation of the digit '0' and '1' from the rest of the digit. The digit '0' tends to have PC1 values around 700 to 1300, while the digit '1' have PC1 values around or slightly below -1000. The rest of the digits are in a mix between the values of the digit '0' and '1.'
 
 There are no clear clustering digit-wise in the graph of PC2 in comparison to PC1. However, it was able to separate the group of digits 9, 7, and 4, which all has similar PC score, from the rest of the digits.
@@ -264,52 +265,58 @@ Cluster analysis aims to divides the data into different subgroups based on thei
 
 15. Apply one of the clustering algorithms you learned about in class to your data. Depending on the algorithm you use, you may need to specify a cutpoint to obtain a single cluster label for each sample. Note also that depending on the dimension of your dataset, it may be preferable to apply the clustering algorithm to the first few PCs of your data rather than the data itself. Elaborate upon your choice.
 
-We use K-means algorithm for clustering. From our previous PCA analysis, we noticed that 80% of the predictive information contained within the data can be captured by first 43 PCs, so we decided to use the first 43 PCs for analysis instead of the total 784 pixels. Since we want to categorize the images into digits from 0-9, we pick k value as 10 to cluster the images into 10 categories.  
+We use K-means algorithm for clustering. From our previous PCA analysis, we noticed that 80% of the predictive information contained within the data can be captured by first 43 PCs, so we decided to use the first 43 PCs for analysis instead of the total 784 pixels. In either case, full visualization of the clusters would be difficult. However, by using 43 dimensions, the sensitivity of the Euclidean distance measurement between points would be higher than the full 784 dimensions. Since there are 10 digits, we chose k to be 10 in order to see if there are any relation between the proximity of the data points, and the digit label. 
 
 ```{r, eval = FALSE}
-k <- 9
-minst_kmeans_df = minst_pcs$x[, 1:11]
-k_cluster <- kmeans(minst_kmeans_df, centers = k, nstart = 25, iter.max = 100)
-
+k <- 10
+minst_kmeans_df_43 <- minst_pcs$x[, 1:43]
+k_cluster_43 <- kmeans(minst_kmeans_df_43, centers = k, nstart = 25, iter.max = 1000)
 # plots to compare
-fviz_cluster(k_cluster, geom = "point", data = minst_kmeans_df) + ggtitle("KMeans Clusters")
-#k10
+fviz_43 <- fviz_cluster(k_cluster_43, geom = "point", data = minst_kmeans_df_43) + ggtitle("KMeans Clusters 43 PCs")
+
+print(fviz_43)
 ```
 
 16. What did the clustering algorithm find? Are the clusters relatively homogeneous or heterogeneous? Summarize the results.
 
-Homogeneity means all of the observations with the same class label are in the same cluster. We noticed that the standard deviation of all clusters are less than 3, and most of them are less than or around 2, so we can say that the clusters are relatively homogeneous. 
-
 ```{r, eval = FALSE}
 # Summarize results of clustering.
-minst_pcs_cluster_df <- cbind(minst_sample.together[, c(1)], k_cluster$cluster)
-minst_pcs_cluster_df <- data.frame(minst_pcs_cluster_df)
-minst_pcs_cluster_df[,1] <- factor(minst_pcs_cluster_df[,1])
-minst_pcs_cluster_df[,2] <- factor(minst_pcs_cluster_df[,2])
-colnames(minst_pcs_cluster_df)[1] <- "digit"
-colnames(minst_pcs_cluster_df)[2] <- "cluster"
+minst_pcs_cluster_df.43 <- cbind(minst_sample.together[, c(1)], k_cluster_43$cluster)
+minst_pcs_cluster_df.43 <- data.frame(minst_pcs_cluster_df.43)
+minst_pcs_cluster_df.43[,1] <- factor(minst_pcs_cluster_df.43[,1])
+minst_pcs_cluster_df.43[,2] <- factor(minst_pcs_cluster_df.43[,2])
+colnames(minst_pcs_cluster_df.43)[1] <- "digit"
+colnames(minst_pcs_cluster_df.43)[2] <- "cluster"
 
-ggplot(data = minst_pcs_cluster_df, aes(fill = digit)) + aes(x = cluster) + geom_bar()
+cluster_bar_43 <- ggplot(data = minst_pcs_cluster_df.43, aes(fill = digit)) + aes(x = cluster) + geom_bar() + xlab("Cluster") + ylab("Count") + ggtitle("Clusters with 43 PCs")
+print(cluster_bar_43)
 ```
+Since the dimensionality of the clusters is still pretty high, it is difficult to fully visualize. When projecting to 2 dimensions, it is no surprise that the clusters blend together, since 2 dimension is inadequate at capturing the full information contained in all 43 dimensions. However, in regards to the digits, the clusters do reveal some patterns in composition.
+
+The clusters 2, 3, 6, and 9 are fairly homogeneous in terms of digit composition. They are made mostly of a single digit label with a few points from the other digits. The clusters 1, 5, 7, and 10 have a tripartite composition containing 3 primary digits and a few numbers of other digits. The clusters 4 and 8 have a single digit '1' which dominates its composition. However, approximately half of these clusters are made of an assortment of other digits in almost equal frequency.
+
+From the composition of the clusters, it seems that the data points of digit 0, 2, and 6 are close to other data points of the same type, so that the clustering algorithm placed them into their own clusters. However, the digit 0 is still spread out enough in the subspace of the 43 PCs, so that the clustering algorithm put them into two different clusters. Portions of the data points for 9, 7, and 4 are closer to each other in subspace than their own category, so that they exists in two different tripartite clusters 1 and 5. The digits 3, 5, and 8 exhibit similar arrangements. The data points that represent digit 1 are also grouped near each other locally, for they dominates the composition of cluster 4 and 8. However, the points for digit 1 are also blended together with an assortment of other digits, so that the clusters for it are not as homogeneous as the clusters for the digit 0. 
 
 17. What is the within-cluster sum of squares for the clusters you found? How does this compare to the total sum of squares?
 
 ```{r, eval = FALSE}
 # Compute sums of squares.
-withinclustersos <- data.frame(k_cluster$withinss)
+withinclustersos <- data.frame(k_cluster_43$withinss)
 for(i in 1:k){
   row.names(withinclustersos)[i] <- paste0("Cluster", i) 
 }
 
-compared_to_total <- withinclustersos[, 1] / k_cluster$tot.withinss
+compared_to_total <- withinclustersos[, 1] / k_cluster_43$tot.withinss
 withinclustersos <- cbind(withinclustersos, compared_to_total)
-withinclustersos <- rbind(withinclustersos, c(k_cluster$tot.withinss, 1))
+withinclustersos <- rbind(withinclustersos, c(k_cluster_43$tot.withinss, 1))
 rownames(withinclustersos)[k + 1] <- "Total"
 colnames(withinclustersos) <- c("Within.Cluster", "Compared.Total")
-withinclustersos[order(withinclustersos$Compared.Total), ]
+print(withinclustersos[order(withinclustersos$Compared.Total), ])
 ```
 
-The within-cluster sum of squares of all clusters, and their ratio to the total sum of squares are shown in the table. We observed that the clusters 5, 6, 7, 9 have low sum of squares. The clusters 10, 4, and 8 have medium sum of squares, and the clusters 2, 1, and 3 have high sum of squares. The magnitude of the sum of squares roughly correspond to the 
+The within-cluster sum of squares of all clusters, and their ratio to the total sum of squares are shown in the table. We observed that the clusters 6, 8, 9, 4 have low sum of squares. The clusters 3 and 2 have medium sum of squares, and the clusters 1, 5, 7, and 10 have high sum of squares.
+
+The clusters 6, 8, 9, 4 are all dominated by a single type of digit, as shown in the previous part. The low within cluster sum of squares confirms that the data for these digits are indeed close to each other. It also confirms the similarity of the digit '1' to the more complicated digits. The clusters 3 and 2 are also dominated by a single digit type. However, evidently, there is more diversity in the style of these digits so that they have a higher within cluster sum of squared. The tripartite clusters 1, 5, 7, and 10 have the highest within cluster sum of squares. This is not surprising, since the composition is less homogeneous. Furthermore, it shows that the digits composing these clusters have great variations in respect other points of the same digits. Furthermore, there may also be a separation between the digits, but not as significant as the rest of the digits so that the tripartite clusters are formed. 
 
 18. Plot the first 3 PCs against one another again but include the cluster label for each point. Do any patterns emerge? Comment on what you see.
 
@@ -321,11 +328,20 @@ minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "P
 colnames(minst_pcs_pair_df)[3] <- "PC2"
 minst_pcs_pair_df <- cbind(minst_pcs_pair_df, minst_pcs_df[minst_pcs_df$PC == "PC3", c(3)])
 colnames(minst_pcs_pair_df)[4] <- "PC3"
-minst_pcs_cluster_pair_df <- cbind(minst_pcs_pair_df, factor(k10$cluster))
+minst_pcs_cluster_pair_df <- cbind(minst_pcs_pair_df, factor(k_cluster_43$cluster))
 colnames(minst_pcs_cluster_pair_df)[5] <- "cluster"
 ggpairs(data=minst_pcs_cluster_pair_df, title = "Pairwise PC Plot with Cluster", columns = 2:4, upper = list(continuous = "points"), mapping = ggplot2::aes(color = cluster), legend = 1)
 
 ```
+Similar to the pairwise PCA plot from the previous section, the data points largely blends together in a 2-dimensional plot. However, with respect to the clusters, some pattern still emerges.
+
+From the PC2 vs PC1 plot, it appears that the cluster 4 and 1 distinctly occupies a corner of the plot, where the rest of the data points blend together.
+
+In the PC3 vs PC1 plot, the cluster 1 is again by itself in the right of the graph. However, the cluster 4 is no longer as separate.
+
+In the PC3 vs PC2 plot, a few clusters appear to be distinctly separated. The cluster 6 clearly occupies the lower left corner, while the cluster 8 occupies the lower right corner. The cluster 4 is somewhat separated in the upper right corner.
+
+In all the cases, the separation is not very clear-cut, and this may be due to the limitation of the 2D plot in depicting high dimensional data.
 
 # Classification
 19. Next we would like to perform classification on the data. Explain intuitively what that means. What does it mean to classify the data? What are the objects being classified? Why might this be of interest for this dataset?
@@ -343,13 +359,13 @@ For our dataset, we have one categorical variable, which is the labeled digit of
 cluster_label_table <- data.frame()
 for (i in 1:k){
   for (j in 1:k){
-    cluster_label_table[i, j] <- nrow(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == i & minst_pcs_cluster_df$digit == (j-1),])
+    cluster_label_table[i, j] <- nrow(minst_pcs_cluster_df.43[minst_pcs_cluster_df.43$cluster == i & minst_pcs_cluster_df.43$digit == (j-1),])
   }
  colnames(cluster_label_table)[i] <- paste0("Digit", i-1)
 }
 cluster_total <- data.frame()
 for (i in 1:k){
-  cluster_total[i, 1] <- nrow(minst_pcs_cluster_df[minst_pcs_cluster_df$cluster == i,])
+  cluster_total[i, 1] <- nrow(minst_pcs_cluster_df.43[minst_pcs_cluster_df.43$cluster == i,])
 }
 cluster_label_table <-  cbind(cluster_total, cluster_label_table)
 colnames(cluster_label_table)[1] <- "Total"
@@ -358,11 +374,14 @@ for (i in 1:k){
 }
 cluster_label_table
 ```
-From the table, we can observe that cluster1, cluster6, cluster7, cluster8 are mostly comprised by one class. Cluster1 is mostly comprised by class1 by 292/377; cluster 6 is mostly comprised by class6 by 391/442; cluster7 is mostly comprised by class2 by 301/329, and cluster 8 is mostly comprised by class0 by 361/387. All other clusters are comprised by multiple majority classes and it's hard to determine a prediction of one class from them. In general, our clustering may not have a good performance in predicting one class per image. 
+The table quantitatively confirms our finding in the clustering section. The clusters 2, 3, 6, and 9 are dominated by digit 0, 6, 2, and 0 respectively with a few numbers of other digits. The clusters 4 and 8 are primarily composed of digit 1, but with a good portion of the other digit types. The clusters 1 and 5 are composed of primarily digits 4, 7, and 9. The clusters 7 and 10 are dominated by 3, 5, and 8. 
 
 22. Randomly break your dataset into a training set (roughly 80% of the data) and a test set (roughly 20% of the data). What is the point of doing this before doing classification?
 
-We broke our dataset of 5000 obserbations in to 4000 images of training set and 1000 images of test set. We will need to utilize the training set to train and refine our model for classification, and the test set is used to examine the effectiveness and accuracy of our prediction model. 
+We broke our dataset of 5000 obserbations in to 4000 images of training set and 1000 images of test set. We will need to utilize the training set to train and refine our model for classification, and the test set is used to examine the effectiveness and accuracy of our prediction model on new data. By using a test set, trained model can be tested to see if it is truly universal, and to ensure that it was not over-fitted and tied down too tightly to the training data.
+
+We also investigated whether using the principal components has any effect on the effectiveness of classification given the high dimensionality of the original data. Since 43 PCs captures about 80% of the variation in the data, we decided to also project both the training and test dataset to the first 43 PCs calculated from the training set.
+
 ```{r, eval = FALSE}
 # Break into train and test sets.
 minst_classification <- minst_sample.together ##load data
@@ -371,67 +390,93 @@ minst_classification <- minst_sample.together ##load data
 ran <- sample(1:nrow(minst_classification), 0.8 * nrow(minst_classification)) 
  
 #extract training set
+pcs_classify <- 43
 minst_classification_train <- minst_classification[ran, -c(1)] 
+minst_classification_train_pcs <- prcomp(minst_classification_train)
+
 #extract testing set
 minst_classification_test <- minst_classification[-ran, -c(1)] 
-
+minst_classification_test_pcs <- predict(minst_classification_train_pcs, newdata = minst_classification_test)
+minst_classification_test_pcs <- as.data.frame(minst_classification_test_pcs)
 ```
 
 23. Using the class labels based on the categorical variable you chose earlier, apply a classification method to the training set. Be sure to specify any free parameters that were chosen. What is the accuracy of the fitted model on the training set?
-We use KNN Classification method with k values 5 on the training set. We calcualted the accuracy of the fitted model on the training set as 96. 
+
+We use KNN Classification method with k values 5 on the training set.
+
 ```{r, eval = FALSE}
 # Run classification algorithm.
 # Compute training set accuracy.
-
-pcs_classify <- 43
-minst_classification_train_pcs <- prcomp(minst_classification_train)
 
 # extract labels for training
 minst_target_category <- minst_classification[ran,1]
 # extract test labels to test accuracy
 minst_test_category <- minst_classification[-ran,1]
 
-minst_train_predict <- knn(minst_classification_train_pcs$x[, 1:pcs_classify],minst_classification_train_pcs$x[, 1:pcs_classify],cl=minst_target_category,k=5)
+minst_train_predict.raw <- knn(minst_classification_train,minst_classification_train,cl=minst_target_category, k=5)
+minst_train_predict.pcs <- knn(minst_classification_train_pcs$x[, 1:pcs_classify],minst_classification_train_pcs$x[, 1:pcs_classify],cl=minst_target_category, k=5)
 
 # compute accuracy on training set
-tab_train <- table(minst_train_predict,minst_target_category)
+tab_train.pcs <- table(minst_train_predict.pcs,minst_target_category)
+tab_train.raw <- table(minst_train_predict.raw,minst_target_category)
 accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
-accuracy(tab_train)
+
+train_result <- data.frame(
+  Raw = accuracy(tab_train.raw),
+  PC43 = accuracy(tab_train.pcs)
+)
+rownames(train_result) <- c("Accuracy")
+print(train_result)
 ```
+We found that the accuracy of the model on the raw training set is approximately 95%. The accuracy on the training set projected to the first 43 PCs is approximately 96%.
 
 24. What is the accuracy of the fitted model on the test set? How does this compare to the accuracy on the training set? Does this make sense? Explain why or why not.
 
-We the run the fitted model on the test set and get the accuracy value 92.9. It's a bit lower compared to the training set, but the accuracy is still quite high. Since our model is trained based on the training set, it intuitively makes sense that the test set might have lower accuracy compared to the training set. 
+
 ```{r, eval = FALSE}
 # run knn, and we store our prediction value in minst_test_predict
-minst_classification_test_pcs <- predict(minst_classification_train_pcs, newdata = minst_classification_test)
-minst_classification_test_pcs <- as.data.frame(minst_classification_test_pcs)
-minst_test_predict <- knn(minst_classification_train_pcs$x[, 1:pcs_classify],minst_classification_test_pcs[, 1:pcs_classify],cl=minst_target_category,k=5)
+minst_test_predict.pcs <- knn(minst_classification_train_pcs$x[, 1:pcs_classify],minst_classification_test_pcs[, 1:pcs_classify],cl=minst_target_category,k=5)
+minst_test_predict.raw <- knn(minst_classification_train,minst_classification_test,cl=minst_target_category,k=5)
 # Compute accuracy on test set.
-tab <- table(minst_test_predict,minst_test_category)
+test_tab.pcs <- table(minst_test_predict.pcs,minst_test_category)
+test_tab.raw <- table(minst_test_predict.raw,minst_test_category)
 accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
-accuracy(tab)
+
+test_result <- data.frame(
+  Raw = accuracy(test_tab.raw),
+  PC43 = accuracy(test_tab.pcs)
+)
+
+rownames(test_result) <- c("Accuracy")
+print(test_result)
 ```
+We the run the fitted model on the test set, and the accuracy of KNN on the raw test set dropped to between 91-92%. The accuracy of the model on the test set projected to the first 43 PCs calculated on the training set dropped to approximately 93%.
+
+The accuracy is a bit lower compared to the training set, but the it is still quite high. Since the rule of our model is based on the proximity to the data points in the training set itself, it does make intuitive sense that the accuracy would be higher on the training set. However, with the new data from the test set, it expected that it can contain data points outside of the known neighborhood of the correct labels in the training set. Thus, there would be a greater error.
+
+Regardless, it is surprising that both performed pretty well given that there is a high number of dimensions in both cases.
 
 25. Construct a confusion matrix based on the results of classification. Were there any classes on which your algorithm performed better than others? What about worse than others? Does this make sense based on the nature of the data?
 ```{r, eval = FALSE}
-# Find classes where the algorithm performed best / worst.
-##create confusion matrix
-#tab <- table(minst_test_predict,minst_test_category)
-#tab
-#plot(tab)
+cm.pcs <- confusionMatrix(factor(minst_test_predict.pcs), factor(minst_test_category), dnn = c("Prediction", "Label"))
+cm.raw <- confusionMatrix(factor(minst_test_predict.raw), factor(minst_test_category), dnn = c("Prediction", "Label"))
 
+confusion.raw <- ggplot(as.data.frame(cm.raw$table), aes(Prediction,sort(Label,decreasing = T), fill= Freq)) + geom_tile() + geom_text(aes(label=Freq)) + scale_fill_gradient(low="white", high="#009194") + labs(x = "Label",y = "Prediction") + scale_x_discrete(labels=paste0("D", 0:9)) + scale_y_discrete(labels=paste0("D", 0:9)) + ggtitle("KNN Confusion Raw")
 
-cm <- confusionMatrix(factor(minst_test_predict), factor(minst_test_category), dnn = c("Prediction", "Label"))
+confuion.pcs <- ggplot(as.data.frame(cm.pcs$table), aes(Prediction,sort(Label,decreasing = T), fill= Freq)) + geom_tile() + geom_text(aes(label=Freq)) + scale_fill_gradient(low="white", high="#009194") + labs(x = "Label",y = "Prediction") + scale_x_discrete(labels=paste0("D", 0:9)) + scale_y_discrete(labels=paste0("D", 0:9)) + ggtitle("KNN Confusion PC43")
 
-ggplot(as.data.frame(cm$table), aes(Prediction,sort(Label,decreasing = T), fill= Freq)) +
-        geom_tile() + geom_text(aes(label=Freq)) +
-        scale_fill_gradient(low="white", high="#009194") +
-        labs(x = "Label",y = "Prediction") +
-        scale_x_discrete(labels=c("Class_0", "Class_1","Class_2","Class_3","Class_4", "Class_5", "Class_6", "Class_7", "Class_8", "Class_9")) +
-        scale_y_discrete(labels=c("Class_9", "Class_8", "Class_7", "Class_6", "Class_5", "Class_4","Class_3","Class_2","Class_1", "Class_0"))
+gridExtra::grid.arrange(confusion.raw, confuion.pcs, ncol = 2)
+
 ```
-According to the matrix, our algorithm predicts class1 and class7 much better than others, and it predicts class 2, 8, 9 much worse than others. Such condition makes sense because by nature 8 and 9 might be easily get confused since they are both round, while 1 and 7 are much easier to tell because 1 is straight and 7 has clearer edges. 
+According to the matrices, the KNN on the raw data and the projected data both performed decently on all of the digits. They also make the same kind of mis-classification. 
+
+In both cases, there are some minor mislabeling for digits such as digit 5. The significant errors are the mis-labeling of digit 1 as 2 and 7 for the raw KNN, digit 3 as 4 in both, digit 5 as 1 in raw, and digit 9 as 2 and 5 in both.
+
+The confusion of 1 as 2 and 7 makes sense because 7 and 2 both have a central stroke downward, and are both fairly simple. Thus, it would be in the vicinity of 1s. However, it is interesting that the mistake is less severe for the PC43 KNN, which seems to be more sensitive. The confusion of 3 as 4 is less intuitive, and an examination of the actual image but shed more light on it. The digit 5 as 1 in the raw KNN is also not as intuitive, but perhaps the 5 is written such that the vertical stroke is longer and the other parts are less significant. In this case too, the PC projected subspace seem to be able to separate them better. The confusion of 9 as 2 and 5 would make sense if the mis-classified does not close off the circular portion of 9 very well, and it would make the 9 looks similar to 2 or 5.
+
+Both the raw and PC projected KNN did really well on labeling the digit 2. This may be due to the fact that the digit '2' does not have any loops or turns that would cause it to look similar to the other digits if being partially omitted. Surprisingly, both the raw KNN and PC projected KNN did well on labeling the digit 8 as 8, despite its similarity to 6, 5, and 9.
+
+In general, it seems that in some cases the PC projected KNN offers more separation between the digits, and sometimes it reduces the separation. However, overall, it helps to distinguish some of the digits slightly more than KNN on just the raw data. This may be due to the fact that the Euclidean distance loses sensitivity as the dimensions increases. However, by using the 43 PCs, about 20% of the variations are not captured, and this may lead to greater confusion in some cases.
 
 # Conclusion
 *{Fill in your conclusion}*
